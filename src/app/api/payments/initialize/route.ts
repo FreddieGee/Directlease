@@ -95,6 +95,18 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    let paymentUrl = '';
+    let accessCode: string | null = null;
+
+    if (gateway === 'paystack') {
+      const psResult = paymentResult as any;
+      paymentUrl = psResult.data?.authorization_url || '';
+      accessCode = psResult.data?.access_code || null;
+    } else {
+      const fwResult = paymentResult as any;
+      paymentUrl = fwResult.data?.link || '';
+    }
+
     return NextResponse.json({
       message: 'Payment initialized',
       reference,
@@ -106,10 +118,8 @@ export async function POST(request: NextRequest) {
         legalFee: legalFee || null,
         backgroundCheckFee: bgcheckFee || null,
       },
-      paymentUrl: gateway === 'paystack'
-        ? (paymentResult as any).data?.authorization_url
-        : (paymentResult as any).data?.link,
-      accessCode: gateway === 'paystack' ? (paymentResult as any).data?.access_code : null,
+      paymentUrl,
+      accessCode,
     });
   } catch (error: any) {
     console.error('Payment initialization error:', error);
