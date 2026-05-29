@@ -1,10 +1,11 @@
 "use client";
 
+import { Suspense } from "react";
 import { useState, FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const defaultType = searchParams.get("type") || "";
@@ -32,7 +33,6 @@ export default function LoginPage() {
         return;
       }
 
-      // Redirect based on user type
       const userType = data.user.userType;
       if (userType === "landlord" || userType === "seller") {
         router.push("/landlord/dashboard");
@@ -47,6 +47,64 @@ export default function LoginPage() {
   }
 
   return (
+    <form
+      onSubmit={handleSubmit}
+      className="bg-white p-8 rounded-xl shadow-sm border border-gray-200"
+    >
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
+
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Email
+        </label>
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+          placeholder="you@email.com"
+          required
+        />
+      </div>
+
+      <div className="mb-6">
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Password
+        </label>
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+          placeholder="••••••••"
+          required
+        />
+      </div>
+
+      <button
+        type="submit"
+        disabled={loading}
+        className="w-full bg-blue-600 text-white py-2.5 rounded-lg font-medium hover:bg-blue-700 transition disabled:opacity-50"
+      >
+        {loading ? "Signing in..." : "Sign In"}
+      </button>
+
+      <p className="text-center text-sm text-gray-500 mt-4">
+        Don&apos;t have an account?{" "}
+        <Link href="/register" className="text-blue-600 hover:underline">
+          Register here
+        </Link>
+      </p>
+    </form>
+  );
+}
+
+export default function LoginPage() {
+  return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
@@ -55,60 +113,9 @@ export default function LoginPage() {
           </Link>
           <p className="text-gray-500 mt-2">Sign in to your account</p>
         </div>
-
-        <form
-          onSubmit={handleSubmit}
-          className="bg-white p-8 rounded-xl shadow-sm border border-gray-200"
-        >
-          {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
-              {error}
-            </div>
-          )}
-
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-              placeholder="you@email.com"
-              required
-            />
-          </div>
-
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Password
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-              placeholder="••••••••"
-              required
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white py-2.5 rounded-lg font-medium hover:bg-blue-700 transition disabled:opacity-50"
-          >
-            {loading ? "Signing in..." : "Sign In"}
-          </button>
-
-          <p className="text-center text-sm text-gray-500 mt-4">
-            Don&apos;t have an account?{" "}
-            <Link href="/register" className="text-blue-600 hover:underline">
-              Register here
-            </Link>
-          </p>
-        </form>
+        <Suspense fallback={<div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200 animate-pulse h-64"></div>}>
+          <LoginForm />
+        </Suspense>
       </div>
     </div>
   );

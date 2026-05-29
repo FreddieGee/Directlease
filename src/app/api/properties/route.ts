@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
     // Paid subscribers get full details; free users get basic info
     const isSubscribed = user ? await checkSubscription(user.userId, user.userType) : false;
 
-    const properties = result.rows.map(prop => {
+    const properties = result.rows.map((prop: any) => {
       const base = {
         id: prop.id,
         type: prop.type,

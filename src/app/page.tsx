@@ -10,7 +10,7 @@ export default function HomePage() {
     fetch("/api/properties?limit=1")
       .then(r => r.json())
       .then(data => {
-        if (data.pagination) setStats(prev => ({ ...prev, properties: data.pagination.total }));
+        if (data.pagination) setStats((prev: any) => ({ ...prev, properties: data.pagination.total }));
       })
       .catch(() => {});
   }, []);

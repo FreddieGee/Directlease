@@ -37,42 +37,42 @@ export default function AdminDashboard() {
   function fetchUsers(params = "") {
     fetch(`/api/admin/users${params}`)
       .then(r => r.json())
-      .then(d => setData(prev => ({ ...prev, usersData: d })))
+      .then(d => setData((prev: any) => ({ ...prev, usersData: d })))
       .catch(() => {});
   }
 
   function fetchProperties(params = "") {
     fetch(`/api/admin/properties${params}`)
       .then(r => r.json())
-      .then(d => setData(prev => ({ ...prev, propertiesData: d })))
+      .then(d => setData((prev: any) => ({ ...prev, propertiesData: d })))
       .catch(() => {});
   }
 
   function fetchVerifications() {
     fetch("/api/admin/verifications")
       .then(r => r.json())
-      .then(d => setData(prev => ({ ...prev, verificationsData: d })))
+      .then(d => setData((prev: any) => ({ ...prev, verificationsData: d })))
       .catch(() => {});
   }
 
   function fetchSubscriptions(params = "") {
     fetch(`/api/admin/subscriptions${params}`)
       .then(r => r.json())
-      .then(d => setData(prev => ({ ...prev, subsData: d })))
+      .then(d => setData((prev: any) => ({ ...prev, subsData: d })))
       .catch(() => {});
   }
 
   function fetchTransactions(params = "") {
     fetch(`/api/admin/transactions${params}`)
       .then(r => r.json())
-      .then(d => setData(prev => ({ ...prev, txData: d })))
+      .then(d => setData((prev: any) => ({ ...prev, txData: d })))
       .catch(() => {});
   }
 
   function fetchChatLogs() {
     fetch("/api/admin/chat")
       .then(r => r.json())
-      .then(d => setData(prev => ({ ...prev, chatData: d })))
+      .then(d => setData((prev: any) => ({ ...prev, chatData: d })))
       .catch(() => {});
   }
 
