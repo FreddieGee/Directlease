@@ -1,0 +1,83 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
+  --secondary: #059669;
+  --accent: #f59e0b;
+  --danger: #dc2626;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Chat warning banner */
+.chat-warning-banner {
+  background: linear-gradient(90deg, #fef3c7, #fde68a, #fef3c7);
+  border-bottom: 2px solid #f59e0b;
+  animation: pulse-warning 2s infinite;
+}
+
+@keyframes pulse-warning {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+
+/* Ease of doing business badge */
+.eob-badge {
+  background: linear-gradient(135deg, #059669, #10b981);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Admin sidebar */
+.admin-sidebar {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #1e3a5f 0%, #1a2a4a 100%);
+}
+
+.admin-sidebar a.active {
+  background: rgba(255, 255, 255, 0.1);
+  border-left: 3px solid #3b82f6;
+}
+
+/* Property card hover */
+.property-card {
+  transition: all 0.2s ease;
+}
+.property-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
