@@ -10,13 +10,35 @@ export default function PropertyDetail() {
   const [property, setProperty] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [selectedSlot, setSelectedSlot] = useState("");
+  const [isSaved, setIsSaved] = useState(false);
 
   useEffect(() => {
     fetch(`/api/properties/${params.id}`)
       .then(r => r.json())
       .then(d => { setProperty(d.property); setLoading(false); })
       .catch(() => setLoading(false));
+
+    // Check if saved
+    fetch("/api/favorites")
+      .then(r => r.json())
+      .then(d => {
+        const saved = d.savedProperties || [];
+        setIsSaved(saved.some((s: any) => s.id === params.id));
+      })
+      .catch(() => {});
   }, [params.id]);
+
+  async function toggleSave() {
+    const res = await fetch("/api/favorites", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ propertyId: params.id }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setIsSaved(data.saved);
+    }
+  }
 
   async function requestViewing() {
     if (!selectedSlot) return;
@@ -60,7 +82,12 @@ export default function PropertyDetail() {
 
           <h1 className="text-2xl font-bold mb-2">{property.title}</h1>
           <p className="text-gray-500 mb-4">{property.address}, {property.city}, {property.state}</p>
-          <p className="text-3xl font-bold text-blue-600 mb-6">₦{property.priceNaira?.toLocaleString()}</p>
+          <div className="flex items-center gap-4 mb-6">
+            <p className="text-3xl font-bold text-blue-600">₦{property.priceNaira?.toLocaleString()}</p>
+            <button onClick={toggleSave} className={`px-4 py-2 rounded-lg text-sm font-medium border transition ${isSaved ? 'bg-red-50 border-red-200 text-red-700' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'}`}>
+              {isSaved ? '❤️ Saved' : '🤍 Save'}
+            </button>
+          </div>
 
           {property.description && (
             <div className="mb-6">

@@ -191,6 +191,15 @@ CREATE TABLE price_reductions (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Saved/Favorite properties (tenant/buyer bookmarks)
+CREATE TABLE saved_properties (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  property_id UUID NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, property_id)
+);
+
 -- Indexes
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_user_type ON users(user_type);
@@ -206,6 +215,8 @@ CREATE INDEX idx_subscriptions_user ON subscriptions(user_id);
 CREATE INDEX idx_transactions_property ON transactions(property_id);
 CREATE INDEX idx_transactions_landlord ON transactions(landlord_id);
 CREATE INDEX idx_transactions_tenant ON transactions(tenant_id);
+CREATE INDEX idx_saved_properties_user ON saved_properties(user_id);
+CREATE INDEX idx_price_reductions_property ON price_reductions(property_id);
 
 -- Insert default admin user
 -- Password: Administrator_01 (bcrypt hash)

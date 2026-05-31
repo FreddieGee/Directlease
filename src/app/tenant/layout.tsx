@@ -24,6 +24,7 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
   if (!user) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full"></div></div>;
 
   const navItems = [
+    { href: '/tenant/dashboard', label: 'Dashboard', icon: '📊' },
     { href: '/tenant/browse', label: 'Browse Properties', icon: '🔍' },
     { href: '/tenant/subscriptions', label: 'Subscription', icon: '💳' },
     { href: '/tenant/viewings', label: 'My Viewings', icon: '📅' },
