@@ -75,6 +75,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Notify admin about pending verification
+    try {
+      const { sendAdminVerificationPendingEmail } = await import('@/lib/email/templates');
+      await sendAdminVerificationPendingEmail({
+        userName: user.email.split('@')[0],
+        userEmail: user.email,
+        userType: user.userType,
+      });
+    } catch (emailErr) {
+      console.error('Failed to send admin verification notification:', emailErr);
+    }
+
     return NextResponse.json({
       message: 'Verification documents submitted. Awaiting admin review.',
     }, { status: 201 });

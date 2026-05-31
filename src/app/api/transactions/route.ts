@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
 
     // Get property details
     const propResult = await pool.query(
-      'SELECT id, price_naira, type FROM properties WHERE id = $1 AND status = $2',
+      'SELECT id, price_naira, type, title FROM properties WHERE id = $1 AND status = $2',
       [propertyId, 'approved']
     );
 
@@ -106,6 +106,20 @@ export async function POST(request: NextRequest) {
       'UPDATE properties SET status = $1, updated_at = NOW() WHERE id = $2',
       [newStatus, propertyId]
     );
+
+    // Send transaction confirmation email
+    try {
+      const { sendTransactionConfirmationEmail } = await import('@/lib/email/templates');
+      await sendTransactionConfirmationEmail({
+        email: user.email,
+        name: user.email.split('@')[0],
+        propertyTitle: property.title || 'Property',
+        amount: parseFloat(property.price_naira).toLocaleString(),
+        transactionRef: result.rows[0].id.slice(0, 8),
+      });
+    } catch (emailErr) {
+      console.error('Failed to send transaction email:', emailErr);
+    }
 
     return NextResponse.json({
       message: 'Transaction completed successfully',

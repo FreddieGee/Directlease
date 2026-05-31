@@ -76,11 +76,15 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
     }
 
-    // Get the viewing request details
+    // Get the viewing request details with tenant and property info
     const vrResult = await pool.query(
-      `SELECT vr.*, p.landlord_id 
+      `SELECT vr.*, p.landlord_id, p.title as property_title, p.address as property_address,
+              u.email as tenant_email, u.name as tenant_name,
+              vs.date as slot_date, vs.time_start as slot_time_start, vs.time_end as slot_time_end
        FROM viewing_requests vr
        JOIN properties p ON vr.property_id = p.id
+       JOIN users u ON vr.tenant_id = u.id
+       JOIN viewing_slots vs ON vr.slot_id = vs.id
        WHERE vr.id = $1`,
       [requestId]
     );
@@ -101,6 +105,21 @@ export async function PATCH(request: NextRequest) {
         `UPDATE viewing_requests SET status = 'agreed', updated_at = NOW() WHERE id = $1`,
         [requestId]
       );
+
+      // Send confirmation email to tenant
+      try {
+        const { sendViewingConfirmedEmail } = await import('@/lib/email/templates');
+        await sendViewingConfirmedEmail({
+          tenantEmail: vr.tenant_email,
+          tenantName: vr.tenant_name,
+          propertyTitle: vr.property_title,
+          viewingDate: new Date(vr.slot_date).toLocaleDateString(),
+          viewingTime: `${vr.slot_time_start?.slice(0,5)} - ${vr.slot_time_end?.slice(0,5)}`,
+        });
+      } catch (emailErr) {
+        console.error('Failed to send viewing confirmation email:', emailErr);
+      }
+
       return NextResponse.json({ message: 'Viewing agreed. Tenant will receive confirmation.', requestId });
     } else if (action === 'reschedule') {
       // Free the current slot
@@ -112,6 +131,19 @@ export async function PATCH(request: NextRequest) {
         `UPDATE viewing_requests SET status = 'rescheduled', updated_at = NOW() WHERE id = $1`,
         [requestId]
       );
+
+      // Send reschedule notification email to tenant
+      try {
+        const { sendViewingRescheduledEmail } = await import('@/lib/email/templates');
+        await sendViewingRescheduledEmail({
+          tenantEmail: vr.tenant_email,
+          tenantName: vr.tenant_name,
+          propertyTitle: vr.property_title,
+        });
+      } catch (emailErr) {
+        console.error('Failed to send reschedule email:', emailErr);
+      }
+
       return NextResponse.json({ message: 'Viewing rescheduled. Tenant will be notified.', requestId });
     } else {
       return NextResponse.json({ error: 'Invalid action. Use: agree or reschedule' }, { status: 400 });

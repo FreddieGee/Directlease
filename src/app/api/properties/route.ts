@@ -180,6 +180,18 @@ export async function POST(request: NextRequest) {
 
     const property = result.rows[0];
 
+    // Notify admin about pending listing
+    try {
+      const { sendAdminListingPendingEmail } = await import('@/lib/email/templates');
+      await sendAdminListingPendingEmail({
+        propertyTitle: title,
+        landlordName: user.email.split('@')[0],
+        propertyType: type,
+      });
+    } catch (emailErr) {
+      console.error('Failed to send admin listing notification:', emailErr);
+    }
+
     return NextResponse.json({
       message: 'Property listed successfully. Pending admin approval.',
       property: {
