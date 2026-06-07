@@ -25,9 +25,6 @@ export default function HomePage() {
               <Link href="/" className="text-2xl font-bold text-blue-600">
                 DirectLease
               </Link>
-              <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-medium">
-                No Agents
-              </span>
             </div>
             <div className="flex items-center gap-4">
               <Link
@@ -52,8 +49,8 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto">
             <h1 className="text-5xl font-bold text-gray-900 mb-6 leading-tight">
-              No Agents.{" "}
-              <span className="text-blue-600">Direct Deals.</span>
+              Find Your Perfect Home.{" "}
+              <span className="text-blue-600">Direct From Owners.</span>
             </h1>
             <p className="text-xl text-gray-600 mb-8">
               The home leasing and real estate platform that cuts out agents 
@@ -183,7 +180,7 @@ export default function HomePage() {
             <Link href="/" className="text-2xl font-bold text-white">
               DirectLease
             </Link>
-            <p className="mt-2">No Agents. Direct Deals.</p>
+            <p className="mt-2">Find your home directly from owners.</p>
             <div className="mt-4">
               <Link href="/terms" className="hover:text-white mx-3">
                 Terms &amp; Conditions
