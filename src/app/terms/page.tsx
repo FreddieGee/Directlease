@@ -18,34 +18,35 @@ function TermsContent() {
     setError("");
 
     const token = searchParams.get("token") || localStorage.getItem("token");
-    if (!token) {
-      setError("No authentication token found. Please login again.");
-      return;
-    }
+            if (!token) {
+              setError("No authentication token found. Please login again.");
+              setLoading(false);
+              return;
+            }
 
-    try {
-      const res = await fetch("/api/auth/accept-tc", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        setError(data.error || "Failed to accept terms");
-        return;
-      }
-      const meRes = await fetch("/api/auth/me", { headers: { Authorization: `Bearer ${token}` } });
-      const meData = await meRes.json();
-      if (meData.user) {
-        const type = meData.user.userType;
-        router.push(type === "landlord" || type === "seller" ? "/landlord/dashboard" : "/tenant/browse");
-      } else {
-        router.push("/login");
-      }
-    } catch (err) {
-      setError("Connection error. Please try again.");
-    } finally {
-      setLoading(false);
-    }
+            try {
+              const res = await fetch("/api/auth/accept-tc", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+              });
+              if (!res.ok) {
+                const data = await res.json();
+                setError((data.error || "Failed to accept terms") + " (status " + res.status + ")");
+                setLoading(false);
+                return;
+              }
+              const meRes = await fetch("/api/auth/me", { headers: { Authorization: `Bearer ${token}` } });
+              const meData = await meRes.json();
+              if (meData.user) {
+                const type = meData.user.userType;
+                window.location.href = type === "landlord" || type === "seller" ? "/landlord/dashboard" : "/tenant/browse";
+              } else {
+                window.location.href = "/login";
+              }
+            } catch (err) {
+              setError("Connection error: " + (err instanceof Error ? err.message : "Please try again."));
+              setLoading(false);
+            }
   }
 
   return (

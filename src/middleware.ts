@@ -6,9 +6,12 @@ import { verifyToken, getTokenFromHeader } from '@/lib/jwt';
 const publicRoutes = [
   '/api/auth/login',
   '/api/auth/register',
+  '/api/auth/accept-tc',
+  '/api/auth/me',
   '/api/admin/login',
   '/api/properties',
   '/api/seed',
+  '/api/health',
 ];
 
 // Admin-only routes

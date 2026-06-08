@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
       email: user.email,
     });
 
-    return NextResponse.json(
+    const response = NextResponse.json(
       {
         message: 'Registration successful. Please review and accept Terms & Conditions.',
         user: {
@@ -91,6 +91,17 @@ export async function POST(request: NextRequest) {
       },
       { status: 201 }
     );
+
+    // Set session cookie so the user stays logged in
+    response.cookies.set('session_token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60,
+      path: '/',
+    });
+
+    return response;
   } catch (error: any) {
     console.error('Registration error:', error);
     return NextResponse.json(
