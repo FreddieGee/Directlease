@@ -13,12 +13,25 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>({});
 
+  // Helper to make authenticated admin API calls
+  function adminFetch(url: string, options: RequestInit = {}) {
+    const token = localStorage.getItem("token");
+    return fetch(url, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(options.headers || {}),
+      },
+    });
+  }
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (token) headers["Authorization"] = `Bearer ${token}`;
 
-    fetch("/api/auth/me", { headers })
+    adminFetch("/api/auth/me")
       .then(r => r.json())
       .then(data => {
         if (!data.user || data.user.userType !== 'admin') {
@@ -32,49 +45,49 @@ export default function AdminDashboard() {
   }, []);
 
   function fetchAnalytics() {
-    fetch("/api/admin/analytics")
+    adminFetch("/api/admin/analytics")
       .then(r => r.json())
       .then(d => setData(d))
       .catch(() => {});
   }
 
   function fetchUsers(params = "") {
-    fetch(`/api/admin/users${params}`)
+    adminFetch(`/api/admin/users${params}`)
       .then(r => r.json())
       .then(d => setData((prev: any) => ({ ...prev, usersData: d })))
       .catch(() => {});
   }
 
   function fetchProperties(params = "") {
-    fetch(`/api/admin/properties${params}`)
+    adminFetch(`/api/admin/properties${params}`)
       .then(r => r.json())
       .then(d => setData((prev: any) => ({ ...prev, propertiesData: d })))
       .catch(() => {});
   }
 
   function fetchVerifications() {
-    fetch("/api/admin/verifications")
+    adminFetch("/api/admin/verifications")
       .then(r => r.json())
       .then(d => setData((prev: any) => ({ ...prev, verificationsData: d })))
       .catch(() => {});
   }
 
   function fetchSubscriptions(params = "") {
-    fetch(`/api/admin/subscriptions${params}`)
+    adminFetch(`/api/admin/subscriptions${params}`)
       .then(r => r.json())
       .then(d => setData((prev: any) => ({ ...prev, subsData: d })))
       .catch(() => {});
   }
 
   function fetchTransactions(params = "") {
-    fetch(`/api/admin/transactions${params}`)
+    adminFetch(`/api/admin/transactions${params}`)
       .then(r => r.json())
       .then(d => setData((prev: any) => ({ ...prev, txData: d })))
       .catch(() => {});
   }
 
   function fetchChatLogs() {
-    fetch("/api/admin/chat")
+    adminFetch("/api/admin/chat")
       .then(r => r.json())
       .then(d => setData((prev: any) => ({ ...prev, chatData: d })))
       .catch(() => {});
@@ -95,18 +108,16 @@ export default function AdminDashboard() {
   }, [activeTab, user]);
 
   async function handleVerify(userId: string, userType: string, status: string) {
-    await fetch("/api/admin/verifications", {
+    await adminFetch("/api/admin/verifications", {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId, userType, status }),
     });
     fetchVerifications();
   }
 
   async function handlePropertyAction(propertyId: string, status: string) {
-    await fetch("/api/admin/properties", {
+    await adminFetch("/api/admin/properties", {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ propertyId, status }),
     });
     fetchProperties();
