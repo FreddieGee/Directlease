@@ -14,7 +14,11 @@ export default function AdminDashboard() {
   const [data, setData] = useState<any>({});
 
   useEffect(() => {
-    fetch("/api/auth/me")
+    const token = localStorage.getItem("token");
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    fetch("/api/auth/me", { headers })
       .then(r => r.json())
       .then(data => {
         if (!data.user || data.user.userType !== 'admin') {

@@ -25,14 +25,18 @@ export default function AdminLoginPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "Login failed");
+        setError(data.error || "Login failed: " + res.status);
+        setLoading(false);
         return;
       }
 
-      router.push("/admin");
+      if (data.token) {
+        localStorage.setItem("token", data.token);
+      }
+
+      window.location.href = "/admin";
     } catch (err) {
       setError("Connection error. Please try again.");
-    } finally {
       setLoading(false);
     }
   }

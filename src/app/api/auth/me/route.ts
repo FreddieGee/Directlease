@@ -13,6 +13,14 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Also check Authorization header for manually passed tokens
+    if (!token) {
+      const authHeader = request.headers.get('authorization');
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.substring(7);
+      }
+    }
+
     if (!token) {
       return NextResponse.json(
         { error: 'Authentication required' },

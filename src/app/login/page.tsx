@@ -29,19 +29,33 @@ function LoginForm() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "Login failed");
+        setError(data.error || "Login failed: " + res.status);
+        setLoading(false);
         return;
+      }
+
+      if (!data.user || !data.user.userType) {
+        setError("Invalid response from server - missing user data");
+        setLoading(false);
+        return;
+      }
+
+      // Store token in localStorage as fallback
+      if (data.token) {
+        localStorage.setItem("token", data.token);
       }
 
       const userType = data.user.userType;
       if (userType === "landlord" || userType === "seller") {
-        router.push("/landlord/dashboard");
+        window.location.href = "/landlord/dashboard";
+      } else if (userType === "tenant" || userType === "buyer") {
+        window.location.href = "/tenant/browse";
       } else {
-        router.push("/tenant/browse");
+        setError("Unknown user type: " + userType);
+        setLoading(false);
       }
     } catch (err) {
       setError("Connection error. Please try again.");
-    } finally {
       setLoading(false);
     }
   }
