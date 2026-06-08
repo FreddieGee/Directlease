@@ -5,8 +5,18 @@ import { signToken } from '@/lib/jwt';
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { email, password } = body;
+    const contentType = request.headers.get('content-type') || '';
+    let email: string, password: string;
+
+    if (contentType.includes('application/json')) {
+      const body = await request.json();
+      email = body.email;
+      password = body.password;
+    } else {
+      const formData = await request.formData();
+      email = formData.get('email') as string;
+      password = formData.get('password') as string;
+    }
 
     if (!email || !password) {
       return NextResponse.json(
@@ -29,11 +39,6 @@ export async function POST(request: NextRequest) {
     }
 
     const user = result.rows[0];
-    console.log({
-  email: user.email,
-  userType: user.user_type,
-  verification: user.verification_status,
-});
 
     // Admin users should use /api/admin/login
     if (user.user_type === 'admin') {
@@ -59,8 +64,13 @@ export async function POST(request: NextRequest) {
       email: user.email,
     });
 
-    // Create response with cookie
-    const response = NextResponse.json({
+    // Determine redirect based on user type
+    const redirectUrl = (user.user_type === 'landlord' || user.user_type === 'seller')
+      ? '/landlord/dashboard'
+      : '/tenant/browse';
+
+    // Return JSON for AJAX requests
+    return NextResponse.json({
       message: 'Login successful',
       user: {
         id: user.id,
@@ -72,18 +82,8 @@ export async function POST(request: NextRequest) {
         verificationStatus: user.verification_status,
       },
       token,
+      redirectUrl,
     });
-
-    // Set session cookie
-    response.cookies.set('session_token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60, // 7 days
-      path: '/',
-    });
-
-    return response;
   } catch (error: any) {
     console.error('Login error:', error);
     return NextResponse.json(

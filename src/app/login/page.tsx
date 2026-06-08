@@ -1,12 +1,10 @@
 "use client";
 
-import { Suspense } from "react";
-import { useState, FormEvent } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState, FormEvent } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const defaultType = searchParams.get("type") || "";
   const [email, setEmail] = useState("");
@@ -35,21 +33,22 @@ function LoginForm() {
       }
 
       if (!data.user || !data.user.userType) {
-        setError("Invalid response from server - missing user data");
+        setError("Invalid server response - missing user data");
         setLoading(false);
         return;
       }
 
-      // Store token in localStorage as fallback
+      // Store token as backup
       if (data.token) {
         localStorage.setItem("token", data.token);
       }
 
+      // Full page navigation so middleware picks up the cookie
       const userType = data.user.userType;
       if (userType === "landlord" || userType === "seller") {
-        window.location.href = "/landlord/dashboard";
+        window.location.replace("/landlord/dashboard");
       } else if (userType === "tenant" || userType === "buyer") {
-        window.location.href = "/tenant/browse";
+        window.location.replace("/tenant/browse");
       } else {
         setError("Unknown user type: " + userType);
         setLoading(false);
