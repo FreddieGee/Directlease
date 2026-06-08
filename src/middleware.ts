@@ -26,9 +26,8 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Only protect API routes and admin pages
+  // Only protect API routes (not pages — pages handle auth via layout components)
   if (pathname.startsWith('/api/')) {
-    // Check Authorization header or cookie
     let token = getTokenFromHeader(request as unknown as Request);
     if (!token) {
       token = request.cookies.get('session_token')?.value || '';
@@ -59,33 +58,10 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // Admin pages — protected
-  if (pathname.startsWith('/admin') && pathname !== '/admin/login') {
-    let token = request.cookies.get('session_token')?.value || '';
-    if (!token) {
-      token = getTokenFromHeader(request as unknown as Request) || '';
-    }
-    if (!token) {
-      return NextResponse.redirect(new URL('/admin/login', request.url));
-    }
-    try {
-      const payload = verifyToken(token);
-      if (payload.userType !== 'admin') {
-        return NextResponse.redirect(new URL('/admin/login', request.url));
-      }
-      return NextResponse.next();
-    } catch {
-      return NextResponse.redirect(new URL('/admin/login', request.url));
-    }
-  }
-
-  // Allow all other routes (landlord, tenant pages — handled by layout components)
+  // All page routes — let the React components handle auth
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: [
-    '/api/:path*',
-    '/admin/:path*',
-  ],
+  matcher: ['/api/:path*'],
 };
