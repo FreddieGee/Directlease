@@ -29,6 +29,11 @@ export async function POST(request: NextRequest) {
     }
 
     const user = result.rows[0];
+    console.log({
+  email: user.email,
+  userType: user.user_type,
+  verification: user.verification_status,
+});
 
     // Admin users should use /api/admin/login
     if (user.user_type === 'admin') {
