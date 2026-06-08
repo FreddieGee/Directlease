@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db/pool';
 import { getAuthUser } from '@/lib/auth-helpers';
+import fs from 'fs';
+import path from 'path';
 
 // GET /api/properties - Browse properties (public for basic info)
 export async function GET(request: NextRequest) {
@@ -189,8 +191,62 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = await request.json();
-    const { type, category, title, description, priceNaira, photosUrls, videosUrls, address, city, state } = body;
+    let type, category, title, description, priceNaira, address, city, state;
+    let photosUrls: string[] = [];
+    let videosUrls: string[] = [];
+
+    const contentType = request.headers.get('content-type') || '';
+
+    if (contentType.includes('multipart/form-data')) {
+      // Handle FormData (file upload)
+      const formData = await request.formData();
+      type = formData.get('type') as string;
+      category = formData.get('category') as string;
+      title = formData.get('title') as string;
+      description = formData.get('description') as string;
+      priceNaira = parseFloat(formData.get('priceNaira') as string);
+      address = formData.get('address') as string;
+      city = formData.get('city') as string;
+      state = formData.get('state') as string;
+
+      // Handle file uploads - save to uploads directory with unique names
+      const uploadDir = path.join(process.cwd(), 'public', 'uploads');
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+
+      const photoFiles = formData.getAll('photos') as File[];
+      const videoFiles = formData.getAll('videos') as File[];
+
+      for (const file of photoFiles) {
+        const ext = file.name.split('.').pop();
+        const filename = `photo_${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+        const buffer = Buffer.from(await file.arrayBuffer());
+        fs.writeFileSync(path.join(uploadDir, filename), buffer);
+        photosUrls.push(`/uploads/${filename}`);
+      }
+
+      for (const file of videoFiles) {
+        const ext = file.name.split('.').pop();
+        const filename = `video_${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+        const buffer = Buffer.from(await file.arrayBuffer());
+        fs.writeFileSync(path.join(uploadDir, filename), buffer);
+        videosUrls.push(`/uploads/${filename}`);
+      }
+    } else {
+      // Handle JSON body (URL-based uploads)
+      const body = await request.json();
+      type = body.type;
+      category = body.category;
+      title = body.title;
+      description = body.description;
+      priceNaira = body.priceNaira;
+      address = body.address;
+      city = body.city;
+      state = body.state;
+      photosUrls = body.photosUrls || [];
+      videosUrls = body.videosUrls || [];
+    }
 
     // Validate required fields
     if (!type || !category || !title || !description || !priceNaira || !address || !city || !state) {
@@ -252,7 +308,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Property creation error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error: ' + error.message },
       { status: 500 }
     );
   }
