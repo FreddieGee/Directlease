@@ -58,12 +58,57 @@ export async function GET(request: NextRequest) {
     }
 
     // Get total count
-    const countResult = await pool.query(
-      query.replace(/SELECT p\.id.*?FROM/, 'SELECT COUNT(*) FROM'),
-      params
-    );
-    const total = parseInt(countResult.rows[0].count);
+    
+let countQuery = `
+  SELECT COUNT(*) AS count
+  FROM properties p
+  JOIN users u ON p.landlord_id = u.id
+  WHERE p.status = 'approved'
+`;
 
+const countParams: any[] = [];
+let countIndex = 1;
+
+if (type) {
+  countQuery += ` AND p.type = $${countIndex++}`;
+  countParams.push(type);
+}
+
+if (category) {
+  countQuery += ` AND p.category = $${countIndex++}`;
+  countParams.push(category);
+}
+
+if (city) {
+  countQuery += ` AND LOWER(p.city) LIKE LOWER($${countIndex++})`;
+  countParams.push(`%${city}%`);
+}
+
+if (state) {
+  countQuery += ` AND LOWER(p.state) LIKE LOWER($${countIndex++})`;
+  countParams.push(`%${state}%`);
+}
+
+if (minPrice) {
+  countQuery += ` AND p.price_naira >= $${countIndex++}`;
+  countParams.push(parseFloat(minPrice));
+}
+
+if (maxPrice) {
+  countQuery += ` AND p.price_naira <= $${countIndex++}`;
+  countParams.push(parseFloat(maxPrice));
+}
+
+if (featured === 'true') {
+  countQuery += ` AND p.is_featured = TRUE`;
+}
+
+const countResult = await pool.query(countQuery, countParams);
+
+const total =
+  countResult.rows.length > 0
+    ? parseInt(countResult.rows[0].count, 10)
+    : 0;
     // Add ordering and pagination
     query += ` ORDER BY p.is_featured DESC, p.created_at DESC LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
     params.push(limit, offset);
