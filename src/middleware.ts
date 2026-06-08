@@ -8,6 +8,7 @@ const publicRoutes = [
   '/api/auth/register',
   '/api/admin/login',
   '/api/properties',
+  '/api/seed',
 ];
 
 // Admin-only routes
@@ -19,7 +20,7 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Allow public routes
-  if (publicRoutes.some(route => pathname.startsWith(route) && !pathname.startsWith('/api/admin/login'))) {
+  if (publicRoutes.some(route => pathname.startsWith(route))) {
     return NextResponse.next();
   }
 
