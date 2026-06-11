@@ -10,10 +10,11 @@ export default function AdminDashboard() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [pageLoading, setPageLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(false);
+  const [dataError, setDataError] = useState<string | null>(null);
   const [data, setData] = useState<any>({});
 
-  // Helper to make authenticated admin API calls
   function adminFetch(url: string, options: RequestInit = {}) {
     const token = localStorage.getItem("token");
     return fetch(url, {
@@ -27,75 +28,115 @@ export default function AdminDashboard() {
   }
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-
     adminFetch("/api/auth/me")
       .then(r => r.json())
-      .then(data => {
-        if (!data.user || data.user.userType !== 'admin') {
+      .then(d => {
+        if (!d.user || d.user.userType !== 'admin') {
           router.push('/admin/login');
         } else {
-          setUser(data.user);
-          fetchAnalytics();
+          setUser(d.user);
         }
       })
       .catch(() => router.push('/admin/login'));
   }, []);
 
   function fetchAnalytics() {
+    setDataLoading(true);
+    setDataError(null);
     adminFetch("/api/admin/analytics")
-      .then(r => r.json())
+      .then(async r => {
+        if (!r.ok) {
+          const err = await r.json().catch(() => ({ error: `HTTP ${r.status}` }));
+          throw new Error(err.error || `HTTP ${r.status}`);
+        }
+        return r.json();
+      })
       .then(d => setData(d))
-      .catch(() => {});
+      .catch((err) => setDataError(err.message))
+      .finally(() => setDataLoading(false));
   }
 
-  function fetchUsers(params = "") {
-    adminFetch(`/api/admin/users${params}`)
-      .then(r => r.json())
+  function fetchUsers() {
+    setDataLoading(true);
+    setDataError(null);
+    adminFetch("/api/admin/users")
+      .then(async r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
       .then(d => setData((prev: any) => ({ ...prev, usersData: d })))
-      .catch(() => {});
+      .catch((err) => setDataError(err.message))
+      .finally(() => setDataLoading(false));
   }
 
-  function fetchProperties(params = "") {
-    adminFetch(`/api/admin/properties${params}`)
-      .then(r => r.json())
+  function fetchProperties() {
+    setDataLoading(true);
+    setDataError(null);
+    adminFetch("/api/admin/properties")
+      .then(async r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
       .then(d => setData((prev: any) => ({ ...prev, propertiesData: d })))
-      .catch(() => {});
+      .catch((err) => setDataError(err.message))
+      .finally(() => setDataLoading(false));
   }
 
   function fetchVerifications() {
+    setDataLoading(true);
+    setDataError(null);
     adminFetch("/api/admin/verifications")
-      .then(r => r.json())
+      .then(async r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
       .then(d => setData((prev: any) => ({ ...prev, verificationsData: d })))
-      .catch(() => {});
+      .catch((err) => setDataError(err.message))
+      .finally(() => setDataLoading(false));
   }
 
-  function fetchSubscriptions(params = "") {
-    adminFetch(`/api/admin/subscriptions${params}`)
-      .then(r => r.json())
+  function fetchSubscriptions() {
+    setDataLoading(true);
+    setDataError(null);
+    adminFetch("/api/admin/subscriptions")
+      .then(async r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
       .then(d => setData((prev: any) => ({ ...prev, subsData: d })))
-      .catch(() => {});
+      .catch((err) => setDataError(err.message))
+      .finally(() => setDataLoading(false));
   }
 
-  function fetchTransactions(params = "") {
-    adminFetch(`/api/admin/transactions${params}`)
-      .then(r => r.json())
+  function fetchTransactions() {
+    setDataLoading(true);
+    setDataError(null);
+    adminFetch("/api/admin/transactions")
+      .then(async r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
       .then(d => setData((prev: any) => ({ ...prev, txData: d })))
-      .catch(() => {});
+      .catch((err) => setDataError(err.message))
+      .finally(() => setDataLoading(false));
   }
 
   function fetchChatLogs() {
+    setDataLoading(true);
+    setDataError(null);
     adminFetch("/api/admin/chat")
-      .then(r => r.json())
+      .then(async r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
       .then(d => setData((prev: any) => ({ ...prev, chatData: d })))
-      .catch(() => {});
+      .catch((err) => setDataError(err.message))
+      .finally(() => setDataLoading(false));
   }
 
   useEffect(() => {
     if (!user) return;
-    setLoading(false);
+    setPageLoading(false);
     switch (activeTab) {
       case 'dashboard': fetchAnalytics(); break;
       case 'users': fetchUsers(); break;
@@ -134,7 +175,26 @@ export default function AdminDashboard() {
     { id: 'settings', label: 'Settings', icon: '⚙️' },
   ];
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full"></div></div>;
+  if (pageLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
+
+  const kpis = data.kpis || {};
+  const defaultKpis = {
+    totalUsers: 0,
+    totalProperties: 0,
+    activeSubscriptions: 0,
+    totalTransactions: 0,
+    totalServiceFees: 0,
+    pendingVerifications: 0,
+    totalViewings: 0,
+    badgesAwarded: 0,
+  };
+  const mergedKpis = { ...defaultKpis, ...kpis };
 
   return (
     <div className="min-h-screen flex">
@@ -160,7 +220,7 @@ export default function AdminDashboard() {
         </nav>
         <div className="absolute bottom-4 left-4 right-4 px-4">
           <button
-            onClick={() => { document.cookie = "session_token=; max-age=0"; router.push('/admin/login'); }}
+            onClick={() => { localStorage.removeItem("token"); document.cookie = "session_token=; max-age=0"; router.push('/admin/login'); }}
             className="w-full text-gray-400 hover:text-white text-sm py-2"
           >
             Sign Out
@@ -170,20 +230,35 @@ export default function AdminDashboard() {
 
       {/* Main Content */}
       <main className="flex-1 bg-gray-50 p-8 overflow-auto">
+        {/* Error Banner */}
+        {dataError && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm">
+            ⚠️ {dataError}
+          </div>
+        )}
+
+        {/* Loading Indication */}
+        {dataLoading && (
+          <div className="mb-4 text-sm text-gray-500 flex items-center gap-2">
+            <div className="animate-spin h-3 w-3 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+            Loading data...
+          </div>
+        )}
+
         {/* Dashboard Overview */}
-        {activeTab === 'dashboard' && data.kpis && (
+        {activeTab === 'dashboard' && (
           <div>
             <h1 className="text-2xl font-bold mb-6">Dashboard Overview</h1>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
               {[
-                { label: 'Total Users', value: data.kpis.totalUsers, color: 'bg-blue-500' },
-                { label: 'Properties', value: data.kpis.totalProperties, color: 'bg-green-500' },
-                { label: 'Active Subs', value: data.kpis.activeSubscriptions, color: 'bg-purple-500' },
-                { label: 'Transactions', value: data.kpis.totalTransactions, color: 'bg-amber-500' },
-                { label: 'Service Fees (₦)', value: data.kpis.totalServiceFees?.toLocaleString(), color: 'bg-emerald-500' },
-                { label: 'Pending Verify', value: data.kpis.pendingVerifications, color: 'bg-red-500' },
-                { label: 'Viewings', value: data.kpis.totalViewings, color: 'bg-indigo-500' },
-                { label: 'Badges Awarded', value: data.kpis.badgesAwarded, color: 'bg-teal-500' },
+                { label: 'Total Users', value: mergedKpis.totalUsers, color: 'bg-blue-500' },
+                { label: 'Properties', value: mergedKpis.totalProperties, color: 'bg-green-500' },
+                { label: 'Active Subs', value: mergedKpis.activeSubscriptions, color: 'bg-purple-500' },
+                { label: 'Transactions', value: mergedKpis.totalTransactions, color: 'bg-amber-500' },
+                { label: 'Service Fees (₦)', value: mergedKpis.totalServiceFees?.toLocaleString(), color: 'bg-emerald-500' },
+                { label: 'Pending Verify', value: mergedKpis.pendingVerifications, color: 'bg-red-500' },
+                { label: 'Viewings', value: mergedKpis.totalViewings, color: 'bg-indigo-500' },
+                { label: 'Badges Awarded', value: mergedKpis.badgesAwarded, color: 'bg-teal-500' },
               ].map((stat, i) => (
                 <div key={i} className="bg-white rounded-xl p-6 border border-gray-200">
                   <div className={`w-3 h-3 rounded-full ${stat.color} mb-2`}></div>
@@ -194,35 +269,37 @@ export default function AdminDashboard() {
             </div>
 
             {/* Recent Transactions */}
-            <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <h2 className="text-lg font-semibold mb-4">Recent Transactions</h2>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-left text-gray-500">
-                    <th className="pb-2">Property</th>
-                    <th className="pb-2">Amount (₦)</th>
-                    <th className="pb-2">Landlord</th>
-                    <th className="pb-2">Tenant</th>
-                    <th className="pb-2">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(data.recentTransactions || []).map((tx: any) => (
-                    <tr key={tx.id} className="border-b last:border-0">
-                      <td className="py-2">{tx.title}</td>
-                      <td className="py-2">{parseFloat(tx.amount).toLocaleString()}</td>
-                      <td className="py-2">{tx.landlord}</td>
-                      <td className="py-2">{tx.tenant}</td>
-                      <td className="py-2">
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                          tx.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                        }`}>{tx.status}</span>
-                      </td>
+            {data.recentTransactions && data.recentTransactions.length > 0 && (
+              <div className="bg-white rounded-xl border border-gray-200 p-6">
+                <h2 className="text-lg font-semibold mb-4">Recent Transactions</h2>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-left text-gray-500">
+                      <th className="pb-2">Property</th>
+                      <th className="pb-2">Amount (₦)</th>
+                      <th className="pb-2">Landlord</th>
+                      <th className="pb-2">Tenant</th>
+                      <th className="pb-2">Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {(data.recentTransactions || []).map((tx: any) => (
+                      <tr key={tx.id} className="border-b last:border-0">
+                        <td className="py-2">{tx.title}</td>
+                        <td className="py-2">{parseFloat(tx.amount).toLocaleString()}</td>
+                        <td className="py-2">{tx.landlord}</td>
+                        <td className="py-2">{tx.tenant}</td>
+                        <td className="py-2">
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                            tx.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                          }`}>{tx.status}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
 
@@ -243,7 +320,9 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(data.usersData?.users || []).map((u: any) => (
+                  {(data.usersData?.users || []).length === 0 ? (
+                    <tr><td className="p-3 text-gray-400 text-center" colSpan={6}>No users found</td></tr>
+                  ) : (data.usersData?.users || []).map((u: any) => (
                     <tr key={u.id} className="border-t hover:bg-gray-50">
                       <td className="p-3 font-medium">{u.name}</td>
                       <td className="p-3 text-gray-500">{u.email}</td>
@@ -284,7 +363,9 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(data.propertiesData?.properties || []).map((p: any) => (
+                  {(data.propertiesData?.properties || []).length === 0 ? (
+                    <tr><td className="p-3 text-gray-400 text-center" colSpan={7}>No properties found</td></tr>
+                  ) : (data.propertiesData?.properties || []).map((p: any) => (
                     <tr key={p.id} className="border-t hover:bg-gray-50">
                       <td className="p-3 font-medium">{p.title}</td>
                       <td className="p-3 text-gray-500">{p.landlord_name}</td>
@@ -332,7 +413,9 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(data.verificationsData?.landlordVerifications || []).map((v: any) => (
+                  {(data.verificationsData?.landlordVerifications || []).length === 0 ? (
+                    <tr><td className="p-3 text-gray-400 text-center" colSpan={5}>No landlord verifications</td></tr>
+                  ) : (data.verificationsData?.landlordVerifications || []).map((v: any) => (
                     <tr key={v.id} className="border-t hover:bg-gray-50">
                       <td className="p-3 font-medium">{v.name}</td>
                       <td className="p-3 text-gray-500">{v.email}</td>
@@ -371,7 +454,9 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(data.verificationsData?.tenantVerifications || []).map((v: any) => (
+                  {(data.verificationsData?.tenantVerifications || []).length === 0 ? (
+                    <tr><td className="p-3 text-gray-400 text-center" colSpan={6}>No tenant verifications</td></tr>
+                  ) : (data.verificationsData?.tenantVerifications || []).map((v: any) => (
                     <tr key={v.id} className="border-t hover:bg-gray-50">
                       <td className="p-3 font-medium">{v.name}</td>
                       <td className="p-3 text-gray-500">{v.email}</td>
@@ -416,7 +501,9 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(data.subsData?.subscriptions || []).map((s: any) => (
+                  {(data.subsData?.subscriptions || []).length === 0 ? (
+                    <tr><td className="p-3 text-gray-400 text-center" colSpan={6}>No subscriptions found</td></tr>
+                  ) : (data.subsData?.subscriptions || []).map((s: any) => (
                     <tr key={s.id} className="border-t hover:bg-gray-50">
                       <td className="p-3 font-medium">{s.user_name}</td>
                       <td className="p-3 capitalize">{s.user_type}</td>
@@ -454,7 +541,9 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(data.txData?.transactions || []).map((tx: any) => (
+                  {(data.txData?.transactions || []).length === 0 ? (
+                    <tr><td className="p-3 text-gray-400 text-center" colSpan={6}>No transactions found</td></tr>
+                  ) : (data.txData?.transactions || []).map((tx: any) => (
                     <tr key={tx.id} className="border-t hover:bg-gray-50">
                       <td className="p-3 font-medium">{tx.property_title}</td>
                       <td className="p-3">{tx.landlord_name}</td>
@@ -494,7 +583,9 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(data.chatData?.messages || []).map((msg: any) => (
+                  {(data.chatData?.messages || []).length === 0 ? (
+                    <tr><td className="p-3 text-gray-400 text-center" colSpan={5}>No chat messages</td></tr>
+                  ) : (data.chatData?.messages || []).map((msg: any) => (
                     <tr key={msg.id} className="border-t hover:bg-gray-50">
                       <td className="p-3 font-medium">{msg.property_title}</td>
                       <td className="p-3">{msg.sender_name} <span className="text-xs text-gray-400">({msg.sender_type})</span></td>
