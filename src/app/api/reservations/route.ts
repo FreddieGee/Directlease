@@ -5,7 +5,7 @@ import { getAuthUser } from '@/lib/auth-helpers';
 // POST /api/reservations - Reserve a property (after mutual agreement in chat)
 export async function POST(request: NextRequest) {
   try {
-    const user = getAuthUser(request);
+    const user = await getAuthUser(request);
     if (!user || (user.userType !== 'tenant' && user.userType !== 'buyer' && user.userType !== 'admin')) {
       return NextResponse.json({ error: 'Only tenants/buyers can reserve properties' }, { status: 403 });
     }
@@ -150,7 +150,7 @@ export async function GET(request: NextRequest) {
 // DELETE /api/reservations - Cancel a reservation
 export async function DELETE(request: NextRequest) {
   try {
-    const user = getAuthUser(request);
+    const user = await getAuthUser(request);
     if (!user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }

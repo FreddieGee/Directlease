@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { verifyToken, getTokenFromHeader } from '@/lib/jwt';
+import { getTokenFromHeader } from '@/lib/jwt';
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -26,7 +26,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Only protect API routes (not pages — pages handle auth via layout components)
+  // Only protect API routes
   if (pathname.startsWith('/api/')) {
     let token = getTokenFromHeader(request as unknown as Request);
     if (!token) {
@@ -37,28 +37,11 @@ export function middleware(request: NextRequest) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    try {
-      const payload = verifyToken(token);
-
-      // Admin-only API routes
-      if (pathname.startsWith('/api/admin/') && payload.userType !== 'admin') {
-        return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-      }
-
-      // Properties POST — only landlords/sellers
-      if (pathname.startsWith('/api/properties') && request.method === 'POST') {
-        if (payload.userType !== 'landlord' && payload.userType !== 'seller') {
-          return NextResponse.json({ error: 'Only landlords/sellers can create listings' }, { status: 403 });
-        }
-      }
-
-      return NextResponse.next();
-    } catch {
-      return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
-    }
+    // We let the route handlers do the actual JWT verification
+    // (jose works reliably on Node.js runtime; middleware runs on Edge)
+    return NextResponse.next();
   }
 
-  // All page routes — let the React components handle auth
   return NextResponse.next();
 }
 

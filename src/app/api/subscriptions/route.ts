@@ -5,7 +5,7 @@ import { getAuthUser } from '@/lib/auth-helpers';
 // GET /api/subscriptions - Get user's subscription
 export async function GET(request: NextRequest) {
   try {
-    const user = getAuthUser(request);
+    const user = await getAuthUser(request);
     if (!user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
 // POST /api/subscriptions - Create/upgrade subscription
 export async function POST(request: NextRequest) {
   try {
-    const user = getAuthUser(request);
+    const user = await getAuthUser(request);
     if (!user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }

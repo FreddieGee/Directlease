@@ -5,7 +5,7 @@ import { getAuthUser } from '@/lib/auth-helpers';
 // GET /api/admin/properties - List all properties (admin only)
 export async function GET(request: NextRequest) {
   try {
-    const user = getAuthUser(request);
+    const user = await getAuthUser(request);
     if (!user || user.userType !== 'admin') {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
 // PATCH /api/admin/properties - Approve/reject/feature properties
 export async function PATCH(request: NextRequest) {
   try {
-    const user = getAuthUser(request);
+    const user = await getAuthUser(request);
     if (!user || user.userType !== 'admin') {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
@@ -108,7 +108,7 @@ export async function PATCH(request: NextRequest) {
 // DELETE /api/admin/properties - Remove property
 export async function DELETE(request: NextRequest) {
   try {
-    const user = getAuthUser(request);
+    const user = await getAuthUser(request);
     if (!user || user.userType !== 'admin') {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }

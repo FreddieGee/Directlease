@@ -32,6 +32,8 @@ export default function AdminLoginPage() {
 
       if (data.token) {
         localStorage.setItem("token", data.token);
+        // Also set as cookie so middleware can read it
+        document.cookie = `session_token=${data.token}; path=/; max-age=604800; SameSite=Lax`;
       }
 
       window.location.href = "/admin";

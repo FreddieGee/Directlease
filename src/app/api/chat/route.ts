@@ -5,7 +5,7 @@ import { getAuthUser } from '@/lib/auth-helpers';
 // GET /api/chat - Get user's conversations
 export async function GET(request: NextRequest) {
   try {
-    const user = getAuthUser(request);
+    const user = await getAuthUser(request);
     if (!user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
 // POST /api/chat - Send a message
 export async function POST(request: NextRequest) {
   try {
-    const user = getAuthUser(request);
+    const user = await getAuthUser(request);
     if (!user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }

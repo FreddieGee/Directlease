@@ -6,7 +6,7 @@ import { initializeFlutterwavePayment, generateFlutterwaveTxRef } from '@/lib/pa
 
 export async function POST(request: NextRequest) {
   try {
-    const user = getAuthUser(request);
+    const user = await getAuthUser(request);
     if (!user || (user.userType !== 'tenant' && user.userType !== 'buyer')) {
       return NextResponse.json({ error: 'Only tenants/buyers can initiate payments' }, { status: 403 });
     }

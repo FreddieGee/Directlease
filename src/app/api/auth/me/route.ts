@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const payload = verifyToken(token);
+    const payload = await verifyToken(token);
 
     const result = await pool.query(
       `SELECT id, user_type, email, name, phone, tc_accepted, verification_status, created_at

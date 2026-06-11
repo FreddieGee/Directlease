@@ -5,7 +5,7 @@ import { getAuthUser } from '@/lib/auth-helpers';
 // GET /api/admin/users - List all users (admin only)
 export async function GET(request: NextRequest) {
   try {
-    const user = getAuthUser(request);
+    const user = await getAuthUser(request);
     if (!user || user.userType !== 'admin') {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
 // PATCH /api/admin/users - Update user (suspend, verify, etc.)
 export async function PATCH(request: NextRequest) {
   try {
-    const user = getAuthUser(request);
+    const user = await getAuthUser(request);
     if (!user || user.userType !== 'admin') {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
@@ -102,7 +102,7 @@ export async function PATCH(request: NextRequest) {
 // DELETE /api/admin/users - Delete user
 export async function DELETE(request: NextRequest) {
   try {
-    const user = getAuthUser(request);
+    const user = await getAuthUser(request);
     if (!user || user.userType !== 'admin') {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }

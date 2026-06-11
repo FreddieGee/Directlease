@@ -5,7 +5,7 @@ import { getAuthUser } from '@/lib/auth-helpers';
 // GET /api/landlord/viewings - Get viewing requests for landlord's properties
 export async function GET(request: NextRequest) {
   try {
-    const user = getAuthUser(request);
+    const user = await getAuthUser(request);
     if (!user || (user.userType !== 'landlord' && user.userType !== 'seller' && user.userType !== 'admin')) {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
     }

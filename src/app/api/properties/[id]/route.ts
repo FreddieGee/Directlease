@@ -9,7 +9,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const user = getAuthUser(request);
+    const user = await getAuthUser(request);
 
     const result = await pool.query(
       `SELECT p.*, u.name as landlord_name, u.phone as landlord_phone, u.email as landlord_email
@@ -77,7 +77,7 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
-    const user = getAuthUser(request);
+    const user = await getAuthUser(request);
     if (!user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }

@@ -9,7 +9,7 @@ export async function GET(
 ) {
   try {
     const { propertyId } = await params;
-    const user = getAuthUser(request);
+    const user = await getAuthUser(request);
     if (!user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }

@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { verifyToken, getTokenFromHeader } from '@/lib/jwt';
 
-export function getAuthUser(request: NextRequest) {
+export async function getAuthUser(request: NextRequest) {
   let token = getTokenFromHeader(request as unknown as Request);
   
   if (!token) {
@@ -14,24 +14,24 @@ export function getAuthUser(request: NextRequest) {
   if (!token) return null;
 
   try {
-    return verifyToken(token);
+    return await verifyToken(token);
   } catch {
     return null;
   }
 }
 
-export function requireAdmin(request: NextRequest) {
-  const user = getAuthUser(request);
+export async function requireAdmin(request: NextRequest) {
+  const user = await getAuthUser(request);
   if (!user || user.userType !== 'admin') return null;
   return user;
 }
 
-export function requireLandlord(request: NextRequest) {
-  const user = getAuthUser(request);
+export async function requireLandlord(request: NextRequest) {
+  const user = await getAuthUser(request);
   if (!user || (user.userType !== 'landlord' && user.userType !== 'seller')) return null;
   return user;
 }
 
-export function requireAuth(request: NextRequest) {
+export async function requireAuth(request: NextRequest) {
   return getAuthUser(request);
 }

@@ -5,7 +5,7 @@ import { getAuthUser } from '@/lib/auth-helpers';
 // POST /api/viewings - Request a viewing (tenant/buyer)
 export async function POST(request: NextRequest) {
   try {
-    const user = getAuthUser(request);
+    const user = await getAuthUser(request);
     if (!user || (user.userType !== 'tenant' && user.userType !== 'buyer')) {
       return NextResponse.json({ error: 'Only tenants and buyers can request viewings' }, { status: 403 });
     }
@@ -71,7 +71,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Request ID and action are required' }, { status: 400 });
     }
 
-    const user = getAuthUser(request);
+    const user = await getAuthUser(request);
     if (!user || (user.userType !== 'landlord' && user.userType !== 'seller' && user.userType !== 'admin')) {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
     }

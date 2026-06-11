@@ -115,7 +115,7 @@ const total =
 
     const result = await pool.query(query, params);
 
-    const user = getAuthUser(request);
+    const user = await getAuthUser(request);
     // Paid subscribers get full details; free users get basic info
     const isSubscribed = user ? await checkSubscription(user.userId, user.userType) : false;
 
@@ -169,7 +169,7 @@ const total =
 // POST /api/properties - Create property listing (landlord/seller only)
 export async function POST(request: NextRequest) {
   try {
-    const user = getAuthUser(request);
+    const user = await getAuthUser(request);
     if (!user || (user.userType !== 'landlord' && user.userType !== 'seller')) {
       return NextResponse.json(
         { error: 'Only landlords and sellers can create listings' },

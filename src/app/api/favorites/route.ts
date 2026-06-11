@@ -5,7 +5,7 @@ import { getAuthUser } from '@/lib/auth-helpers';
 // GET /api/favorites - Get user's saved properties
 export async function GET(request: NextRequest) {
   try {
-    const user = getAuthUser(request);
+    const user = await getAuthUser(request);
     if (!user) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
 
     const result = await pool.query(
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
 // POST /api/favorites - Save/unsave a property (toggle)
 export async function POST(request: NextRequest) {
   try {
-    const user = getAuthUser(request);
+    const user = await getAuthUser(request);
     if (!user) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
 
     const body = await request.json();

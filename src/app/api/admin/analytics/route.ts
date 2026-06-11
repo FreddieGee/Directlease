@@ -5,7 +5,7 @@ import { getAuthUser } from '@/lib/auth-helpers';
 // GET /api/admin/analytics - Platform KPIs and analytics
 export async function GET(request: NextRequest) {
   try {
-    const user = getAuthUser(request);
+    const user = await getAuthUser(request);
     if (!user || user.userType !== 'admin') {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }

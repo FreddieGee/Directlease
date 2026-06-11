@@ -5,7 +5,7 @@ import { getAuthUser } from '@/lib/auth-helpers';
 // GET /api/admin/verifications - List pending verifications
 export async function GET(request: NextRequest) {
   try {
-    const user = getAuthUser(request);
+    const user = await getAuthUser(request);
     if (!user || user.userType !== 'admin') {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
 // PATCH /api/admin/verifications - Approve/reject verification
 export async function PATCH(request: NextRequest) {
   try {
-    const user = getAuthUser(request);
+    const user = await getAuthUser(request);
     if (!user || user.userType !== 'admin') {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }

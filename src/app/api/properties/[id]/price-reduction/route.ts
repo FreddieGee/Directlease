@@ -9,7 +9,7 @@ export async function POST(
 ) {
   try {
     const { id } = await params;
-    const user = getAuthUser(request);
+    const user = await getAuthUser(request);
     if (!user || (user.userType !== 'landlord' && user.userType !== 'seller')) {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
     }
