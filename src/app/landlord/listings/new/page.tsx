@@ -15,34 +15,53 @@ export default function NewListing() {
     city: '',
     state: '',
   });
-  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
-  const [videoUrls, setVideoUrls] = useState<string[]>([]);
+  const [photoDataUrls, setPhotoDataUrls] = useState<string[]>([]);
+  const [videoDataUrls, setVideoDataUrls] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  function addPhotoUrl(url: string) {
-    if (url.trim()) setPhotoUrls(prev => [...prev, url.trim()]);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
+
+  function readFilesAsDataUrls(files: FileList): Promise<string[]> {
+    return Promise.all(Array.from(files).map(f => new Promise<string>((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result as string);
+      r.onerror = reject;
+      r.readAsDataURL(f);
+    })));
   }
+
+  async function addPhotos(files: FileList | null) {
+    if (!files) return;
+    const urls = await readFilesAsDataUrls(files);
+    setPhotoDataUrls(prev => [...prev, ...urls]);
+  }
+
   function removePhoto(i: number) {
-    setPhotoUrls(prev => prev.filter((_, idx) => idx !== i));
+    setPhotoDataUrls(prev => prev.filter((_, idx) => idx !== i));
   }
-  function addVideoUrl(url: string) {
-    if (url.trim()) setVideoUrls(prev => [...prev, url.trim()]);
+
+  async function addVideos(files: FileList | null) {
+    if (!files) return;
+    const urls = await readFilesAsDataUrls(files);
+    setVideoDataUrls(prev => [...prev, ...urls]);
   }
+
   function removeVideo(i: number) {
-    setVideoUrls(prev => prev.filter((_, idx) => idx !== i));
+    setVideoDataUrls(prev => prev.filter((_, idx) => idx !== i));
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
 
-    if (photoUrls.length < 6) {
-      setError("At least 6 photos are required (add URLs below)");
+    if (photoDataUrls.length < 6) {
+      setError("At least 6 photos are required");
       return;
     }
-    if (videoUrls.length < 2) {
-      setError("At least 2 videos are required (add URLs below)");
+    if (videoDataUrls.length < 2) {
+      setError("At least 2 videos are required");
       return;
     }
 
@@ -58,8 +77,8 @@ export default function NewListing() {
         body: JSON.stringify({
           ...form,
           priceNaira: parseFloat(form.priceNaira),
-          photosUrls: photoUrls,
-          videosUrls: videoUrls,
+          photosUrls: photoDataUrls,
+          videosUrls: videoDataUrls,
         }),
       });
 
@@ -70,7 +89,7 @@ export default function NewListing() {
         router.push('/landlord/listings');
       }
     } catch (err) {
-      setError("Connection error: " + (err instanceof Error ? err.message : ""));
+      setError("Upload error: " + (err instanceof Error ? err.message : ""));
     } finally {
       setLoading(false);
     }
@@ -151,73 +170,51 @@ export default function NewListing() {
           </div>
         </div>
 
-        {/* Photos URLs */}
+        {/* Photos Upload */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Photos ({photoUrls.length}/6 minimum required)
+            Photos ({photoDataUrls.length}/6 minimum required)
           </label>
-          <div className="flex gap-2 mb-2">
-            <input
-              type="text"
-              placeholder="Paste photo URL..."
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-              onKeyDown={e => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  addPhotoUrl((e.target as HTMLInputElement).value);
-                  (e.target as HTMLInputElement).value = '';
-                }
-              }}
-            />
-            <button type="button" onClick={() => {
-              const input = document.querySelector<HTMLInputElement>('[placeholder="Paste photo URL..."]');
-              if (input) { addPhotoUrl(input.value); input.value = ''; }
-            }}
-              className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
-              Add
-            </button>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {photoUrls.map((url, i) => (
-              <div key={i} className="bg-gray-100 px-3 py-1 rounded-lg text-xs flex items-center gap-2 border">
-                <span>📷 #{i+1}</span>
-                <button type="button" onClick={() => removePhoto(i)} className="text-red-500 hover:text-red-700">×</button>
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            ref={photoInputRef}
+            onChange={e => { addPhotos(e.target.files); if (photoInputRef.current) photoInputRef.current.value = ''; }}
+            className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+          />
+          <div className="flex flex-wrap gap-2 mt-2">
+            {photoDataUrls.map((src, i) => (
+              <div key={i} className="relative group">
+                <img src={src} alt={`Photo ${i+1}`} className="h-16 w-16 object-cover rounded-lg border" />
+                <button type="button" onClick={() => removePhoto(i)}
+                  className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition">×</button>
+                <span className="block text-[10px] text-gray-400 text-center mt-0.5">{i+1}</span>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Videos URLs */}
+        {/* Videos Upload */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Videos ({videoUrls.length}/2 minimum required)
+            Videos ({videoDataUrls.length}/2 minimum required)
           </label>
-          <div className="flex gap-2 mb-2">
-            <input
-              type="text"
-              placeholder="Paste video URL..."
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-              onKeyDown={e => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  addVideoUrl((e.target as HTMLInputElement).value);
-                  (e.target as HTMLInputElement).value = '';
-                }
-              }}
-            />
-            <button type="button" onClick={() => {
-              const input = document.querySelector<HTMLInputElement>('[placeholder="Paste video URL..."]');
-              if (input) { addVideoUrl(input.value); input.value = ''; }
-            }}
-              className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
-              Add
-            </button>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {videoUrls.map((url, i) => (
-              <div key={i} className="bg-gray-100 px-3 py-1 rounded-lg text-xs flex items-center gap-2 border">
-                <span>🎬 #{i+1}</span>
-                <button type="button" onClick={() => removeVideo(i)} className="text-red-500 hover:text-red-700">×</button>
+          <input
+            type="file"
+            accept="video/*"
+            multiple
+            ref={videoInputRef}
+            onChange={e => { addVideos(e.target.files); if (videoInputRef.current) videoInputRef.current.value = ''; }}
+            className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+          />
+          <div className="flex flex-wrap gap-2 mt-2">
+            {videoDataUrls.map((src, i) => (
+              <div key={i} className="relative group">
+                <video src={src} className="h-16 w-16 object-cover rounded-lg border" />
+                <button type="button" onClick={() => removeVideo(i)}
+                  className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition">×</button>
+                <span className="block text-[10px] text-gray-400 text-center mt-0.5">{i+1}</span>
               </div>
             ))}
           </div>
@@ -225,7 +222,7 @@ export default function NewListing() {
 
         <button type="submit" disabled={loading}
           className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition disabled:opacity-50">
-          {loading ? "Submitting..." : "Submit for Approval"}
+          {loading ? "Uploading & Submitting..." : "Submit for Approval"}
         </button>
       </form>
     </div>

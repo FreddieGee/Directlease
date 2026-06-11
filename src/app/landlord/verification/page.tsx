@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -13,20 +13,25 @@ export default function LandlordVerificationPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const [form, setForm] = useState({
-    nin: "",
-    homeAddress: "",
-    utilityBillUrl: "",
-    ninSlipUrl: "",
-    profilePicUrl: "",
-  });
+  const [nin, setNin] = useState("");
+  const [homeAddress, setHomeAddress] = useState("");
+  const [utilityBillFile, setUtilityBillFile] = useState<File | null>(null);
+  const [ninSlipFile, setNinSlipFile] = useState<File | null>(null);
+  const [profilePicFile, setProfilePicFile] = useState<File | null>(null);
+  const [utilityBillPreview, setUtilityBillPreview] = useState<string>("");
+  const [ninSlipPreview, setNinSlipPreview] = useState<string>("");
+  const [profilePicPreview, setProfilePicPreview] = useState<string>("");
+
+  const utilityBillRef = useRef<HTMLInputElement>(null);
+  const ninSlipRef = useRef<HTMLInputElement>(null);
+  const profilePicRef = useRef<HTMLInputElement>(null);
 
   function authFetch(url: string, options: RequestInit = {}) {
     const token = localStorage.getItem("token");
     return fetch(url, {
       ...options,
       headers: {
-        "Content-Type": "application/json",
+        ...(options.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...(options.headers || {}),
       },
@@ -39,13 +44,11 @@ export default function LandlordVerificationPage() {
       .then(d => {
         if (d.verification) {
           setVerification(d.verification);
-          setForm({
-            nin: d.verification.nin || "",
-            homeAddress: d.verification.home_address || "",
-            utilityBillUrl: d.verification.utility_bill_url || "",
-            ninSlipUrl: d.verification.nin_slip_url || "",
-            profilePicUrl: d.verification.profile_pic_url || "",
-          });
+          setNin(d.verification.nin || "");
+          setHomeAddress(d.verification.home_address || "");
+          if (d.verification.utility_bill_url) setUtilityBillPreview(d.verification.utility_bill_url);
+          if (d.verification.nin_slip_url) setNinSlipPreview(d.verification.nin_slip_url);
+          if (d.verification.profile_pic_url) setProfilePicPreview(d.verification.profile_pic_url);
         }
         setUserStatus(d.status || "unverified");
       })
@@ -53,21 +56,58 @@ export default function LandlordVerificationPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  function handleFileSelect(
+    file: File | null,
+    setFile: (f: File | null) => void,
+    setPreview: (s: string) => void
+  ) {
+    if (!file) {
+      setFile(null);
+      setPreview("");
+      return;
+    }
+    setFile(file);
+    const reader = new FileReader();
+    reader.onload = (e) => setPreview(e.target?.result as string);
+    reader.readAsDataURL(file);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setSuccess("");
 
-    if (!form.nin || !form.homeAddress || !form.utilityBillUrl || !form.ninSlipUrl || !form.profilePicUrl) {
-      setError("All fields are required");
+    if (!nin || !homeAddress || !utilityBillFile || !ninSlipFile || !profilePicFile) {
+      setError("All fields are required, including document uploads");
       return;
     }
 
     setSubmitting(true);
     try {
+      // Read all files to base64
+      const toBase64 = (file: File): Promise<string> =>
+        new Promise((resolve, reject) => {
+          const r = new FileReader();
+          r.onload = () => resolve(r.result as string);
+          r.onerror = reject;
+          r.readAsDataURL(file);
+        });
+
+      const [utilityBillData, ninSlipData, profilePicData] = await Promise.all([
+        toBase64(utilityBillFile),
+        toBase64(ninSlipFile),
+        toBase64(profilePicFile),
+      ]);
+
       const res = await authFetch("/api/verification", {
         method: "POST",
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          nin,
+          homeAddress,
+          utilityBillUrl: utilityBillData,
+          ninSlipUrl: ninSlipData,
+          profilePicUrl: profilePicData,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -117,56 +157,93 @@ export default function LandlordVerificationPage() {
         </div>
       )}
 
-      {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">{error}</div>
-      )}
-      {success && (
-        <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm">{success}</div>
-      )}
+      {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">{error}</div>}
+      {success && <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm">{success}</div>}
 
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         <p className="text-sm text-gray-500 mb-6">
-          Submit your details below for verification. All documents must be valid and up-to-date.
-          Admin will review and approve your account.
+          Submit your details and documents below for verification. Admin will review and approve your account.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">National Identification Number (NIN)</label>
-            <input type="text" value={form.nin} onChange={e => setForm({...form, nin: e.target.value})}
+            <input type="text" value={nin} onChange={e => setNin(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Home Address</label>
-            <textarea value={form.homeAddress} onChange={e => setForm({...form, homeAddress: e.target.value})} rows={2}
+            <textarea value={homeAddress} onChange={e => setHomeAddress(e.target.value)} rows={2}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
           </div>
 
+          {/* Utility Bill Upload */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Utility Bill (URL — recent)</label>
-            <input type="url" value={form.utilityBillUrl} onChange={e => setForm({...form, utilityBillUrl: e.target.value})}
-              placeholder="https://example.com/utility-bill.pdf"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+            <label className="block text-sm font-medium text-gray-700 mb-1">Utility Bill (recent document)</label>
+            <input
+              type="file"
+              accept="image/*,.pdf"
+              ref={utilityBillRef}
+              onChange={e => handleFileSelect(e.target.files?.[0] || null, setUtilityBillFile, setUtilityBillPreview)}
+              className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+            />
+            {utilityBillPreview && (
+              <div className="mt-2 text-xs text-gray-500 flex items-center gap-2">
+                <span>✅ Uploaded</span>
+                {utilityBillPreview.startsWith("data:image") && (
+                  <img src={utilityBillPreview} alt="Preview" className="h-12 w-12 object-cover rounded border" />
+                )}
+                <button type="button" onClick={() => { setUtilityBillFile(null); setUtilityBillPreview(""); if (utilityBillRef.current) utilityBillRef.current.value = ""; }}
+                  className="text-red-500 hover:text-red-700">Remove</button>
+              </div>
+            )}
           </div>
 
+          {/* NIN Slip Upload */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">NIN Slip (URL)</label>
-            <input type="url" value={form.ninSlipUrl} onChange={e => setForm({...form, ninSlipUrl: e.target.value})}
-              placeholder="https://example.com/nin-slip.jpg"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+            <label className="block text-sm font-medium text-gray-700 mb-1">NIN Slip (document/photo)</label>
+            <input
+              type="file"
+              accept="image/*,.pdf"
+              ref={ninSlipRef}
+              onChange={e => handleFileSelect(e.target.files?.[0] || null, setNinSlipFile, setNinSlipPreview)}
+              className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+            />
+            {ninSlipPreview && (
+              <div className="mt-2 text-xs text-gray-500 flex items-center gap-2">
+                <span>✅ Uploaded</span>
+                {ninSlipPreview.startsWith("data:image") && (
+                  <img src={ninSlipPreview} alt="Preview" className="h-12 w-12 object-cover rounded border" />
+                )}
+                <button type="button" onClick={() => { setNinSlipFile(null); setNinSlipPreview(""); if (ninSlipRef.current) ninSlipRef.current.value = ""; }}
+                  className="text-red-500 hover:text-red-700">Remove</button>
+              </div>
+            )}
           </div>
 
+          {/* Profile Picture Upload */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Profile Picture (URL)</label>
-            <input type="url" value={form.profilePicUrl} onChange={e => setForm({...form, profilePicUrl: e.target.value})}
-              placeholder="https://example.com/profile.jpg"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+            <label className="block text-sm font-medium text-gray-700 mb-1">Profile Picture</label>
+            <input
+              type="file"
+              accept="image/*"
+              ref={profilePicRef}
+              onChange={e => handleFileSelect(e.target.files?.[0] || null, setProfilePicFile, setProfilePicPreview)}
+              className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+            />
+            {profilePicPreview && (
+              <div className="mt-2 text-xs text-gray-500 flex items-center gap-2">
+                <img src={profilePicPreview} alt="Preview" className="h-16 w-16 object-cover rounded-full border" />
+                <button type="button" onClick={() => { setProfilePicFile(null); setProfilePicPreview(""); if (profilePicRef.current) profilePicRef.current.value = ""; }}
+                  className="text-red-500 hover:text-red-700">Remove</button>
+              </div>
+            )}
           </div>
 
           <button type="submit" disabled={submitting || userStatus === "pending"}
             className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition disabled:opacity-50">
-            {submitting ? "Submitting..." : "Submit for Verification"}
+            {submitting ? "Uploading & Submitting..." : "Submit for Verification"}
           </button>
 
           {userStatus === "pending" && (
