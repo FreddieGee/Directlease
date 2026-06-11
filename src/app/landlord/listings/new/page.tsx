@@ -15,60 +15,52 @@ export default function NewListing() {
     city: '',
     state: '',
   });
-  const [photos, setPhotos] = useState<File[]>([]);
-  const [videos, setVideos] = useState<File[]>([]);
-  const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
+  const [videoUrls, setVideoUrls] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const photoInputRef = useRef<HTMLInputElement>(null);
-  const videoInputRef = useRef<HTMLInputElement>(null);
 
-  function handlePhotosSelected(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files || []);
-    setPhotos(prev => [...prev, ...files].slice(0, 10));
-    const previews = files.map(f => URL.createObjectURL(f));
-    setPhotoPreviews(prev => [...prev, ...previews].slice(0, 10));
+  function addPhotoUrl(url: string) {
+    if (url.trim()) setPhotoUrls(prev => [...prev, url.trim()]);
   }
-
   function removePhoto(i: number) {
-    setPhotos(prev => prev.filter((_, idx) => idx !== i));
-    setPhotoPreviews(prev => prev.filter((_, idx) => idx !== i));
+    setPhotoUrls(prev => prev.filter((_, idx) => idx !== i));
+  }
+  function addVideoUrl(url: string) {
+    if (url.trim()) setVideoUrls(prev => [...prev, url.trim()]);
+  }
+  function removeVideo(i: number) {
+    setVideoUrls(prev => prev.filter((_, idx) => idx !== i));
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
 
-    if (photos.length < 6) {
-      setError("At least 6 photos are required");
+    if (photoUrls.length < 6) {
+      setError("At least 6 photos are required (add URLs below)");
       return;
     }
-    if (videos.length < 2) {
-      setError("At least 2 videos are required");
+    if (videoUrls.length < 2) {
+      setError("At least 2 videos are required (add URLs below)");
       return;
     }
 
     setLoading(true);
     try {
-      const formData = new FormData();
-      formData.append('type', form.type);
-      formData.append('category', form.category);
-      formData.append('title', form.title);
-      formData.append('description', form.description);
-      formData.append('priceNaira', form.priceNaira);
-      formData.append('address', form.address);
-      formData.append('city', form.city);
-      formData.append('state', form.state);
-      photos.forEach(p => formData.append('photos', p));
-      videos.forEach(v => formData.append('videos', v));
-
       const token = localStorage.getItem("token");
       const res = await fetch("/api/properties", {
         method: "POST",
         headers: {
+          "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: formData,
+        body: JSON.stringify({
+          ...form,
+          priceNaira: parseFloat(form.priceNaira),
+          photosUrls: photoUrls,
+          videosUrls: videoUrls,
+        }),
       });
 
       const data = await res.json();
@@ -78,7 +70,7 @@ export default function NewListing() {
         router.push('/landlord/listings');
       }
     } catch (err) {
-      setError("Connection error");
+      setError("Connection error: " + (err instanceof Error ? err.message : ""));
     } finally {
       setLoading(false);
     }
@@ -134,12 +126,10 @@ export default function NewListing() {
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" required />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Price (₦)</label>
-            <input type="number" value={form.priceNaira} onChange={e => setForm({...form, priceNaira: e.target.value})}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" required />
-          </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Price (₦)</label>
+          <input type="number" value={form.priceNaira} onChange={e => setForm({...form, priceNaira: e.target.value})}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" required />
         </div>
 
         <div>
@@ -161,65 +151,76 @@ export default function NewListing() {
           </div>
         </div>
 
-        {/* Photos Upload */}
+        {/* Photos URLs */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Photos ({photos.length}/6 minimum required)
+            Photos ({photoUrls.length}/6 minimum required)
           </label>
-          <input
-            ref={photoInputRef}
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={handlePhotosSelected}
-            className="hidden"
-          />
-          <div className="flex flex-wrap gap-2 mb-2">
-            {photoPreviews.map((preview, i) => (
-              <div key={i} className="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-200">
-                <img src={preview} alt={`Photo ${i+1}`} className="w-full h-full object-cover" />
-                <button type="button" onClick={() => removePhoto(i)}
-                  className="absolute top-0 right-0 bg-red-500 text-white w-5 h-5 text-xs rounded-bl-lg">×</button>
-              </div>
-            ))}
-            <button type="button" onClick={() => photoInputRef.current?.click()}
-              className="w-20 h-20 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 hover:border-blue-500 hover:text-blue-500 transition">
-              <span className="text-2xl">+</span>
+          <div className="flex gap-2 mb-2">
+            <input
+              type="text"
+              placeholder="Paste photo URL..."
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  addPhotoUrl((e.target as HTMLInputElement).value);
+                  (e.target as HTMLInputElement).value = '';
+                }
+              }}
+            />
+            <button type="button" onClick={() => {
+              const input = document.querySelector<HTMLInputElement>('[placeholder="Paste photo URL..."]');
+              if (input) { addPhotoUrl(input.value); input.value = ''; }
+            }}
+              className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
+              Add
             </button>
           </div>
-          <p className="text-xs text-gray-400">Select at least 6 photos (JPEG, PNG)</p>
+          <div className="flex flex-wrap gap-2">
+            {photoUrls.map((url, i) => (
+              <div key={i} className="bg-gray-100 px-3 py-1 rounded-lg text-xs flex items-center gap-2 border">
+                <span>📷 #{i+1}</span>
+                <button type="button" onClick={() => removePhoto(i)} className="text-red-500 hover:text-red-700">×</button>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Videos Upload */}
+        {/* Videos URLs */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Videos ({videos.length}/2 minimum required)
+            Videos ({videoUrls.length}/2 minimum required)
           </label>
-          <input
-            ref={videoInputRef}
-            type="file"
-            accept="video/*"
-            multiple
-            onChange={e => {
-              const files = Array.from(e.target.files || []);
-              setVideos(prev => [...prev, ...files].slice(0, 5));
+          <div className="flex gap-2 mb-2">
+            <input
+              type="text"
+              placeholder="Paste video URL..."
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  addVideoUrl((e.target as HTMLInputElement).value);
+                  (e.target as HTMLInputElement).value = '';
+                }
+              }}
+            />
+            <button type="button" onClick={() => {
+              const input = document.querySelector<HTMLInputElement>('[placeholder="Paste video URL..."]');
+              if (input) { addVideoUrl(input.value); input.value = ''; }
             }}
-            className="hidden"
-          />
-          <div className="flex flex-wrap gap-2 mb-2">
-            {videos.map((v, i) => (
-              <div key={i} className="relative bg-gray-100 rounded-lg px-3 py-2 text-sm flex items-center gap-2 border border-gray-200">
-                <span>🎬 {v.name.slice(0, 20)}</span>
-                <button type="button" onClick={() => setVideos(prev => prev.filter((_, idx) => idx !== i))}
-                  className="text-red-500 hover:text-red-700">×</button>
-              </div>
-            ))}
-            <button type="button" onClick={() => videoInputRef.current?.click()}
-              className="px-3 py-2 rounded-lg border-2 border-dashed border-gray-300 text-gray-400 hover:border-blue-500 hover:text-blue-500 transition text-sm">
-              + Add Video
+              className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
+              Add
             </button>
           </div>
-          <p className="text-xs text-gray-400">Select at least 2 videos (MP4, WebM)</p>
+          <div className="flex flex-wrap gap-2">
+            {videoUrls.map((url, i) => (
+              <div key={i} className="bg-gray-100 px-3 py-1 rounded-lg text-xs flex items-center gap-2 border">
+                <span>🎬 #{i+1}</span>
+                <button type="button" onClick={() => removeVideo(i)} className="text-red-500 hover:text-red-700">×</button>
+              </div>
+            ))}
+          </div>
         </div>
 
         <button type="submit" disabled={loading}
