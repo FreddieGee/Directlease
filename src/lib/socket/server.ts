@@ -17,13 +17,13 @@ export function getSocketIO(httpServer?: HTTPServer): SocketIOServer | null {
       path: '/api/socketio',
     });
 
-    io.use((socket, next) => {
+    io.use(async (socket, next) => {
       const token = socket.handshake.auth?.token || socket.handshake.query?.token;
       if (!token) {
         return next(new Error('Authentication required'));
       }
       try {
-        const payload = verifyToken(token as string);
+        const payload = await verifyToken(token as string);
         (socket as any).user = payload;
         next();
       } catch (err) {

@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
     const user = result.rows[0];
 
     // Generate JWT
-    const token = signToken({
+    const token = await signToken({
       userId: user.id,
       userType: user.user_type,
       email: user.email,
