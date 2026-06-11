@@ -3,6 +3,7 @@
 
 -- Drop existing tables if re-running
 DROP TABLE IF EXISTS price_reductions CASCADE;
+DROP TABLE IF EXISTS saved_properties CASCADE;
 DROP TABLE IF EXISTS viewing_requests CASCADE;
 DROP TABLE IF EXISTS viewing_slots CASCADE;
 DROP TABLE IF EXISTS chat_messages CASCADE;
@@ -46,7 +47,7 @@ CREATE TYPE transaction_status_enum AS ENUM ('pending', 'completed', 'cancelled'
 CREATE TYPE viewing_request_status_enum AS ENUM ('pending', 'agreed', 'rescheduled', 'cancelled', 'completed');
 
 -- Users table (landlords, sellers, tenants, buyers, admin)
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_type user_type_enum NOT NULL,
   email VARCHAR(255) UNIQUE NOT NULL,
@@ -60,7 +61,7 @@ CREATE TABLE users (
 );
 
 -- Terms acceptance tracking
-CREATE TABLE terms_acceptance (
+CREATE TABLE IF NOT EXISTS terms_acceptance (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   accepted_at TIMESTAMPTZ DEFAULT NOW(),
@@ -69,7 +70,7 @@ CREATE TABLE terms_acceptance (
 );
 
 -- Landlord/Seller verification documents
-CREATE TABLE landlord_verification_docs (
+CREATE TABLE IF NOT EXISTS landlord_verification_docs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   nin VARCHAR(20) NOT NULL,
@@ -85,7 +86,7 @@ CREATE TABLE landlord_verification_docs (
 );
 
 -- Tenant/Buyer verification documents
-CREATE TABLE tenant_verification_docs (
+CREATE TABLE IF NOT EXISTS tenant_verification_docs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   nin VARCHAR(20) NOT NULL,
@@ -100,7 +101,7 @@ CREATE TABLE tenant_verification_docs (
 );
 
 -- Properties table
-CREATE TABLE properties (
+CREATE TABLE IF NOT EXISTS properties (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   landlord_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   type property_type_enum NOT NULL,
@@ -122,7 +123,7 @@ CREATE TABLE properties (
 );
 
 -- Viewing slots (set by landlord/seller)
-CREATE TABLE viewing_slots (
+CREATE TABLE IF NOT EXISTS viewing_slots (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   property_id UUID NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
   date DATE NOT NULL,
@@ -132,7 +133,7 @@ CREATE TABLE viewing_slots (
 );
 
 -- Viewing requests
-CREATE TABLE viewing_requests (
+CREATE TABLE IF NOT EXISTS viewing_requests (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   property_id UUID NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
   tenant_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -143,7 +144,7 @@ CREATE TABLE viewing_requests (
 );
 
 -- Chat messages
-CREATE TABLE chat_messages (
+CREATE TABLE IF NOT EXISTS chat_messages (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   sender_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   receiver_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -154,7 +155,7 @@ CREATE TABLE chat_messages (
 );
 
 -- Subscriptions
-CREATE TABLE subscriptions (
+CREATE TABLE IF NOT EXISTS subscriptions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   user_type user_type_enum NOT NULL,
@@ -166,7 +167,7 @@ CREATE TABLE subscriptions (
 );
 
 -- Transactions
-CREATE TABLE transactions (
+CREATE TABLE IF NOT EXISTS transactions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   property_id UUID NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
   landlord_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -182,7 +183,7 @@ CREATE TABLE transactions (
 );
 
 -- Price reductions (for Ease of Doing Business badge)
-CREATE TABLE price_reductions (
+CREATE TABLE IF NOT EXISTS price_reductions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   property_id UUID NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
   landlord_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -192,7 +193,7 @@ CREATE TABLE price_reductions (
 );
 
 -- Saved/Favorite properties (tenant/buyer bookmarks)
-CREATE TABLE saved_properties (
+CREATE TABLE IF NOT EXISTS saved_properties (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   property_id UUID NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
@@ -201,24 +202,24 @@ CREATE TABLE saved_properties (
 );
 
 -- Indexes
-CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_users_user_type ON users(user_type);
-CREATE INDEX idx_properties_landlord_id ON properties(landlord_id);
-CREATE INDEX idx_properties_type ON properties(type);
-CREATE INDEX idx_properties_status ON properties(status);
-CREATE INDEX idx_properties_city ON properties(city);
-CREATE INDEX idx_chat_messages_sender_receiver ON chat_messages(sender_id, receiver_id);
-CREATE INDEX idx_chat_messages_property ON chat_messages(property_id);
-CREATE INDEX idx_viewing_requests_tenant ON viewing_requests(tenant_id);
-CREATE INDEX idx_viewing_requests_property ON viewing_requests(property_id);
-CREATE INDEX idx_subscriptions_user ON subscriptions(user_id);
-CREATE INDEX idx_transactions_property ON transactions(property_id);
-CREATE INDEX idx_transactions_landlord ON transactions(landlord_id);
-CREATE INDEX idx_transactions_tenant ON transactions(tenant_id);
-CREATE INDEX idx_saved_properties_user ON saved_properties(user_id);
-CREATE INDEX idx_price_reductions_property ON price_reductions(property_id);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_user_type ON users(user_type);
+CREATE INDEX IF NOT EXISTS idx_properties_landlord_id ON properties(landlord_id);
+CREATE INDEX IF NOT EXISTS idx_properties_type ON properties(type);
+CREATE INDEX IF NOT EXISTS idx_properties_status ON properties(status);
+CREATE INDEX IF NOT EXISTS idx_properties_city ON properties(city);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_sender_receiver ON chat_messages(sender_id, receiver_id);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_property ON chat_messages(property_id);
+CREATE INDEX IF NOT EXISTS idx_viewing_requests_tenant ON viewing_requests(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_viewing_requests_property ON viewing_requests(property_id);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_user ON subscriptions(user_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_property ON transactions(property_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_landlord ON transactions(landlord_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_tenant ON transactions(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_saved_properties_user ON saved_properties(user_id);
+CREATE INDEX IF NOT EXISTS idx_price_reductions_property ON price_reductions(property_id);
 
--- Insert default admin user
+-- Insert default admin user (if not already exists)
 -- Password: Administrator_01 (bcrypt hash)
 INSERT INTO users (user_type, email, password_hash, name, tc_accepted, verification_status)
 VALUES (
@@ -228,4 +229,5 @@ VALUES (
   'Admin',
   TRUE,
   'approved'
-);
+)
+ON CONFLICT (email) DO NOTHING;
