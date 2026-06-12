@@ -87,10 +87,10 @@ export default function LandlordVerificationPage() {
       return;
     }
 
-    // Check file sizes (max 5MB per file to avoid request body limits)
-    const maxSize = 5 * 1024 * 1024; // 5MB
+    // Check file sizes (max 1MB per file to avoid Vercel's 4.5MB body limit with base64 overhead)
+    const maxSize = 1 * 1024 * 1024; // 1MB
     if (utilityBillFile.size > maxSize || ninSlipFile.size > maxSize || profilePicFile.size > maxSize) {
-      setError("Each file must be less than 5MB");
+      setError("Each file must be less than 1MB. Please compress your documents.");
       return;
     }
 
@@ -121,7 +121,15 @@ export default function LandlordVerificationPage() {
           profilePicUrl: profilePicData,
         }),
       });
-      const data = await res.json();
+
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        // Response is not JSON (e.g. 413 Request Entity Too Large)
+        setError(`Server error (${res.status} — ${res.statusText}). Your files may be too large. Try smaller files.`);
+        return;
+      }
       if (!res.ok) {
         setError(data.error || "Submission failed");
       } else {
