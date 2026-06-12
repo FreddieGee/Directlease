@@ -87,6 +87,13 @@ export default function LandlordVerificationPage() {
       return;
     }
 
+    // Check file sizes (max 5MB per file to avoid request body limits)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (utilityBillFile.size > maxSize || ninSlipFile.size > maxSize || profilePicFile.size > maxSize) {
+      setError("Each file must be less than 5MB");
+      return;
+    }
+
     setSubmitting(true);
     try {
       // Read all files to base64
@@ -121,8 +128,9 @@ export default function LandlordVerificationPage() {
         setSuccess("Verification documents submitted! Awaiting admin approval.");
         setUserStatus("pending");
       }
-    } catch {
-      setError("Connection error");
+    } catch (err: any) {
+      setError(err?.message || "An unexpected error occurred. Please check console for details.");
+      console.error("Verification submit error:", err);
     } finally {
       setSubmitting(false);
     }
