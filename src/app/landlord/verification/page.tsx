@@ -42,6 +42,11 @@ export default function LandlordVerificationPage() {
     authFetch("/api/verification")
       .then(r => r.json())
       .then(d => {
+        const hasDocs = !!d.verification;
+        // Only treat as "pending review" if documents have actually been submitted
+        // (new users default to 'pending' in the DB even before submitting anything)
+        const effectiveStatus = hasDocs ? d.status : "unverified";
+
         if (d.verification) {
           setVerification(d.verification);
           setNin(d.verification.nin || "");
@@ -50,7 +55,7 @@ export default function LandlordVerificationPage() {
           if (d.verification.nin_slip_url) setNinSlipPreview(d.verification.nin_slip_url);
           if (d.verification.profile_pic_url) setProfilePicPreview(d.verification.profile_pic_url);
         }
-        setUserStatus(d.status || "unverified");
+        setUserStatus(effectiveStatus);
       })
       .catch(() => setError("Failed to load verification status"))
       .finally(() => setLoading(false));
@@ -154,6 +159,12 @@ export default function LandlordVerificationPage() {
       {userStatus === "pending" && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 text-amber-800 text-sm">
           ⏳ Your verification is currently <strong>pending admin review</strong>. You'll be able to list properties once approved.
+        </div>
+      )}
+
+      {userStatus === "rejected" && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 text-red-800 text-sm">
+          ❌ Your verification was <strong>rejected</strong>. Please update your documents below and resubmit.
         </div>
       )}
 
