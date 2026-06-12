@@ -32,6 +32,7 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
     { href: '/tenant/dashboard', label: 'Dashboard', icon: '📊' },
     { href: '/tenant/browse', label: 'Browse Properties', icon: '🔍' },
     { href: '/tenant/subscriptions', label: 'Subscription', icon: '💳' },
+    { href: '/tenant/verification', label: 'Verification', icon: '✅' },
     { href: '/tenant/viewings', label: 'My Viewings', icon: '📅' },
     { href: '/tenant/chat', label: 'Chat', icon: '💬' },
     { href: '/tenant/transactions', label: 'Transactions', icon: '💰' },

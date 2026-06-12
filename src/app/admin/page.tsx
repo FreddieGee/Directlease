@@ -164,6 +164,37 @@ export default function AdminDashboard() {
     fetchProperties();
   }
 
+  async function handleUserAction(userId: string, action: string, plan?: string) {
+    setDataError(null);
+    try {
+      const res = await adminFetch("/api/admin/users", {
+        method: "PATCH",
+        body: JSON.stringify({ userId, action, plan }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      fetchUsers();
+    } catch (err: any) {
+      setDataError(err.message);
+    }
+  }
+
+  async function handleDeleteUser(userId: string, userName: string) {
+    if (!confirm(`Delete user "${userName}"? This cannot be undone.`)) return;
+    setDataError(null);
+    try {
+      const res = await adminFetch("/api/admin/users", {
+        method: "DELETE",
+        body: JSON.stringify({ userId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      fetchUsers();
+    } catch (err: any) {
+      setDataError(err.message);
+    }
+  }
+
   const tabs: { id: TabType; label: string; icon: string }[] = [
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
     { id: 'users', label: 'Users', icon: '👥' },
@@ -308,6 +339,7 @@ export default function AdminDashboard() {
           <div>
             <h1 className="text-2xl font-bold mb-6">User Management</h1>
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-gray-50 text-left">
@@ -315,17 +347,22 @@ export default function AdminDashboard() {
                     <th className="p-3">Email</th>
                     <th className="p-3">Type</th>
                     <th className="p-3">Verified</th>
-                    <th className="p-3">T&amp;C</th>
-                    <th className="p-3">Created</th>
+                    <th className="p-3">Subscription</th>
+                    <th className="p-3">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {(data.usersData?.users || []).length === 0 ? (
                     <tr><td className="p-3 text-gray-400 text-center" colSpan={6}>No users found</td></tr>
-                  ) : (data.usersData?.users || []).map((u: any) => (
+                  ) : (data.usersData?.users || []).map((u: any) => {
+                    const activeSub = u.subscriptions?.find((s: any) => s.status === 'active');
+                    const isAdmin = u.user_type === 'admin';
+                    const isLandlordSeller = u.user_type === 'landlord' || u.user_type === 'seller';
+                    const isTenantBuyer = u.user_type === 'tenant' || u.user_type === 'buyer';
+                    return (
                     <tr key={u.id} className="border-t hover:bg-gray-50">
                       <td className="p-3 font-medium">{u.name}</td>
-                      <td className="p-3 text-gray-500">{u.email}</td>
+                      <td className="p-3 text-gray-500 text-xs">{u.email}</td>
                       <td className="p-3">
                         <span className="capitalize px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">{u.user_type}</span>
                       </td>
@@ -335,13 +372,69 @@ export default function AdminDashboard() {
                           u.verification_status === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
                         }`}>{u.verification_status}</span>
                       </td>
-                      <td className="p-3">{u.tc_accepted ? '✅' : '❌'}</td>
-                      <td className="p-3 text-gray-500">{new Date(u.created_at).toLocaleDateString()}</td>
+                      <td className="p-3 text-xs">
+                        {activeSub ? (
+                          <span className="text-green-600 font-medium">{activeSub.plan}</span>
+                        ) : (
+                          <span className="text-gray-400">None</span>
+                        )}
+                      </td>
+                      <td className="p-3">
+                        {!isAdmin && (
+                          <div className="flex flex-wrap gap-1">
+                            {/* Verification actions */}
+                            {u.verification_status !== 'approved' && (
+                              <button onClick={() => handleUserAction(u.id, 'approve_verification')}
+                                className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs hover:bg-green-200 whitespace-nowrap">
+                                ✅ Verify
+                              </button>
+                            )}
+                            {u.verification_status === 'approved' && (
+                              <button onClick={() => handleUserAction(u.id, 'revoke_verification')}
+                                className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs hover:bg-yellow-200 whitespace-nowrap">
+                                ⏸ Revoke Verify
+                              </button>
+                            )}
+                            {/* Subscription actions */}
+                            {!activeSub && (
+                              <>
+                                <button onClick={() => handleUserAction(u.id, 'approve_subscription', 'basic-monthly')}
+                                  className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs hover:bg-purple-200 whitespace-nowrap">
+                                  💳 Sub Basic
+                                </button>
+                                <button onClick={() => handleUserAction(u.id, 'approve_subscription', 'premium-monthly')}
+                                  className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded text-xs hover:bg-indigo-200 whitespace-nowrap">
+                                  💳 Sub Premium
+                                </button>
+                              </>
+                            )}
+                            {activeSub && (
+                              <button onClick={() => handleUserAction(u.id, 'revoke_subscription')}
+                                className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200 whitespace-nowrap">
+                                🚫 Revoke Sub
+                              </button>
+                            )}
+                            {/* Delete */}
+                            <button onClick={() => handleDeleteUser(u.id, u.name)}
+                              className="px-2 py-1 bg-red-50 text-red-600 rounded text-xs hover:bg-red-100 border border-red-200 whitespace-nowrap">
+                              🗑 Delete
+                            </button>
+                          </div>
+                        )}
+                        {isAdmin && <span className="text-xs text-gray-400">—</span>}
+                      </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
+              </div>
             </div>
+            {data.usersData?.pagination && (
+              <div className="mt-4 text-sm text-gray-500 text-center">
+                Page {data.usersData.pagination.page} of {data.usersData.pagination.totalPages} ({data.usersData.pagination.total} users)
+              </div>
+            )}
           </div>
         )}
 
