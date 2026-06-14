@@ -183,7 +183,6 @@ export default function TenantVerificationPage() {
             <input
               type="file"
               accept="image/*"
-              capture="environment"
               ref={profilePicRef}
               onChange={e => handleProfilePic(e.target.files?.[0] || null)}
               className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-green-50 file:text-green-700 hover:file:bg-green-100"

@@ -2,12 +2,32 @@ import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db/pool';
 import { getAuthUser } from '@/lib/auth-helpers';
 
+async function checkSubscription(userId: string, userType: string): Promise<boolean> {
+  if (userType === 'landlord' || userType === 'seller' || userType === 'admin') return true;
+  try {
+    const result = await pool.query(
+      `SELECT id FROM subscriptions 
+       WHERE user_id = $1 AND user_type = $2 AND status = 'active' 
+       AND start_date <= NOW() AND end_date >= NOW()`,
+      [userId, userType]
+    );
+    return result.rows.length > 0;
+  } catch {
+    return false;
+  }
+}
+
 // GET /api/chat - Get user's conversations
 export async function GET(request: NextRequest) {
   try {
     const user = await getAuthUser(request);
     if (!user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
+    // Tenants/buyers need an active subscription to use chat
+    if ((user.userType === 'tenant' || user.userType === 'buyer') && !(await checkSubscription(user.userId, user.userType))) {
+      return NextResponse.json({ error: 'Active subscription required to use chat. Please subscribe.', status: 'subscription_required' }, { status: 403 });
     }
 
     // Get all conversations for this user
@@ -46,6 +66,11 @@ export async function POST(request: NextRequest) {
     const user = await getAuthUser(request);
     if (!user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
+    // Tenants/buyers need an active subscription to send messages
+    if ((user.userType === 'tenant' || user.userType === 'buyer') && !(await checkSubscription(user.userId, user.userType))) {
+      return NextResponse.json({ error: 'Active subscription required to send messages. Please subscribe.', status: 'subscription_required' }, { status: 403 });
     }
 
     const body = await request.json();
