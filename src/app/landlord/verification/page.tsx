@@ -43,9 +43,8 @@ export default function LandlordVerificationPage() {
       .then(r => r.json())
       .then(d => {
         const hasDocs = !!d.verification;
-        // Only treat as "pending review" if documents have actually been submitted
-        // (new users default to 'pending' in the DB even before submitting anything)
-        const effectiveStatus = hasDocs ? d.status : "unverified";
+        // If admin approved, always show approved regardless of docs
+        const effectiveStatus = d.status === 'approved' ? 'approved' : (hasDocs ? d.status : "unverified");
 
         if (d.verification) {
           setVerification(d.verification);

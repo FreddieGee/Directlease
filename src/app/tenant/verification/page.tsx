@@ -36,7 +36,8 @@ export default function TenantVerificationPage() {
       .then(r => r.json())
       .then(d => {
         const hasDocs = !!d.verification;
-        const effectiveStatus = hasDocs ? d.status : "unverified";
+        // If admin approved, always show approved regardless of docs
+        const effectiveStatus = d.status === 'approved' ? 'approved' : (hasDocs ? d.status : "unverified");
 
         if (d.verification) {
           setVerification(d.verification);
