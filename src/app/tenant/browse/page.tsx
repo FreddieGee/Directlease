@@ -1,11 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 export default function BrowseProperties() {
   const [properties, setProperties] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
   const [filters, setFilters] = useState({ type: '', category: '', city: '', minPrice: '', maxPrice: '' });
+
+  const token = typeof window !== 'undefined' ? localStorage.getItem("token") : null;
+  const authHeaders: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 
   function fetchProperties() {
     const params = new URLSearchParams();
@@ -15,13 +20,21 @@ export default function BrowseProperties() {
     if (filters.minPrice) params.set('minPrice', filters.minPrice);
     if (filters.maxPrice) params.set('maxPrice', filters.maxPrice);
 
-    fetch(`/api/properties?${params}`)
+    fetch(`/api/properties?${params.toString()}`, { headers: authHeaders })
       .then(r => r.json())
       .then(d => { setProperties(d.properties || []); setLoading(false); })
       .catch(() => setLoading(false));
   }
 
-  useEffect(() => { fetchProperties(); }, []);
+  useEffect(() => {
+    fetch("/api/auth/me", { headers: authHeaders })
+      .then(r => r.json())
+      .then(d => { if (d.user) setUser(d.user); })
+      .catch(() => {});
+    fetchProperties();
+  }, []);
+
+  const isSubscribed = user && (user.userType === 'landlord' || user.userType === 'seller' || user.userType === 'admin');
 
   return (
     <div>
@@ -58,6 +71,16 @@ export default function BrowseProperties() {
           Apply Filters
         </button>
       </div>
+
+      {/* Subscription upsell for unsubscribed tenants */}
+      {user && (user.userType === 'tenant' || user.userType === 'buyer') && !isSubscribed && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 text-amber-800 text-sm flex items-center justify-between">
+          <span>🔒 Subscribe to unlock full property details, contact info, and chat with landlords.</span>
+          <Link href="/tenant/subscriptions" className="bg-amber-600 text-white px-4 py-1.5 rounded-lg text-xs font-medium hover:bg-amber-700 transition ml-4 whitespace-nowrap">
+            View Plans
+          </Link>
+        </div>
+      )}
 
       {/* Property Grid */}
       {loading ? (

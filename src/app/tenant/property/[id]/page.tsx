@@ -12,14 +12,17 @@ export default function PropertyDetail() {
   const [selectedSlot, setSelectedSlot] = useState("");
   const [isSaved, setIsSaved] = useState(false);
 
+  const token = typeof window !== 'undefined' ? localStorage.getItem("token") : null;
+  const authHeaders: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+
   useEffect(() => {
-    fetch(`/api/properties/${params.id}`)
+    fetch(`/api/properties/${params.id}`, { headers: authHeaders })
       .then(r => r.json())
       .then(d => { setProperty(d.property); setLoading(false); })
       .catch(() => setLoading(false));
 
     // Check if saved
-    fetch("/api/favorites")
+    fetch("/api/favorites", { headers: authHeaders })
       .then(r => r.json())
       .then(d => {
         const saved = d.savedProperties || [];
@@ -31,7 +34,7 @@ export default function PropertyDetail() {
   async function toggleSave() {
     const res = await fetch("/api/favorites", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeaders },
       body: JSON.stringify({ propertyId: params.id }),
     });
     if (res.ok) {
@@ -42,10 +45,9 @@ export default function PropertyDetail() {
 
   async function requestViewing() {
     if (!selectedSlot) return;
-    const token = document.cookie.split('; ').find(c => c.startsWith('session_token='))?.split('=')[1];
     const res = await fetch("/api/viewings", {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token || ''}` },
+      headers: { "Content-Type": "application/json", ...authHeaders },
       body: JSON.stringify({ propertyId: params.id, slotId: selectedSlot }),
     });
     if (res.ok) {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 export default function TenantChat() {
   const [conversations, setConversations] = useState<any[]>([]);
@@ -9,28 +10,44 @@ export default function TenantChat() {
   const [newMessage, setNewMessage] = useState("");
   const [currentUserId, setCurrentUserId] = useState("");
   const [showAcceptWarning, setShowAcceptWarning] = useState(false);
+  const [subscriptionError, setSubscriptionError] = useState(false);
+
+  const token = typeof window !== 'undefined' ? localStorage.getItem("token") : null;
+  const authHeaders: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 
   useEffect(() => {
-    fetch("/api/auth/me").then(r => r.json()).then(data => {
-      if (data.user) setCurrentUserId(data.user.id);
-    });
-    fetch("/api/chat").then(r => r.json()).then(d => setConversations(d.conversations || [])).catch(() => {});
+    fetch("/api/auth/me", { headers: authHeaders })
+      .then(r => r.json())
+      .then(data => { if (data.user) setCurrentUserId(data.user.id); })
+      .catch(() => {});
+
+    fetch("/api/chat", { headers: authHeaders })
+      .then(r => r.json())
+      .then(d => {
+        if (d.error && d.status === 'subscription_required') {
+          setSubscriptionError(true);
+        } else {
+          setConversations(d.conversations || []);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   function loadMessages(conv: any) {
     setSelectedConv(conv);
     const otherId = conv.sender_id === currentUserId ? conv.receiver_id : conv.sender_id;
-    fetch(`/api/chat/${conv.property_id}?userId=${otherId}`)
-      .then(r => r.json()).then(d => setMessages(d.messages || [])).catch(() => {});
+    fetch(`/api/chat/${conv.property_id}?userId=${otherId}`, { headers: authHeaders })
+      .then(r => r.json())
+      .then(d => setMessages(d.messages || []))
+      .catch(() => {});
   }
 
   async function sendMessage() {
     if (!newMessage.trim() || !selectedConv) return;
-    const token = document.cookie.split('; ').find(c => c.startsWith('session_token='))?.split('=')[1];
     const otherId = selectedConv.sender_id === currentUserId ? selectedConv.receiver_id : selectedConv.sender_id;
     const res = await fetch("/api/chat", {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token || ''}` },
+      headers: { "Content-Type": "application/json", ...authHeaders },
       body: JSON.stringify({ propertyId: selectedConv.property_id, receiverId: otherId, message: newMessage }),
     });
     if (res.ok) {
@@ -40,6 +57,22 @@ export default function TenantChat() {
   }
 
   const otherName = (conv: any) => conv.other_user_name || 'User';
+
+  if (subscriptionError) {
+    return (
+      <div>
+        <h1 className="text-2xl font-bold mb-6">Messages</h1>
+        <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
+          <p className="text-4xl mb-4">💳</p>
+          <h2 className="text-xl font-semibold mb-2">Subscription Required</h2>
+          <p className="text-gray-500 mb-6">An active subscription is required to use chat. Subscribe now to unlock messaging with landlords and sellers.</p>
+          <Link href="/tenant/subscriptions" className="inline-block bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 transition">
+            View Subscription Plans
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -53,7 +86,7 @@ export default function TenantChat() {
 
       {conversations.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
-          <p className="text-gray-500">No conversations yet. Subscribe to unlock full access and start chatting with landlords.</p>
+          <p className="text-gray-500">No conversations yet.</p>
         </div>
       ) : (
         <div className="grid grid-cols-3 gap-4 h-[65vh]">
