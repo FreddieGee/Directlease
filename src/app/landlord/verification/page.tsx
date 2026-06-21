@@ -93,6 +93,13 @@ export default function LandlordVerificationPage() {
       return;
     }
 
+    // Estimate total body size (base64 adds ~33% overhead)
+    const totalSize = (utilityBillFile.size + ninSlipFile.size + profilePicFile.size) * 1.33;
+    if (totalSize > 4 * 1024 * 1024) {
+      setError(`Total file size too large (estimated ${(totalSize / 1024 / 1024).toFixed(1)}MB). Use smaller files.`);
+      return;
+    }
+
     setSubmitting(true);
     try {
       // Read all files to base64

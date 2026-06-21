@@ -15,7 +15,9 @@ export default function NewListing() {
     city: '',
     state: '',
   });
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [photoDataUrls, setPhotoDataUrls] = useState<string[]>([]);
+  const [videoFiles, setVideoFiles] = useState<File[]>([]);
   const [videoDataUrls, setVideoDataUrls] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -32,23 +34,42 @@ export default function NewListing() {
     })));
   }
 
+  const PHOTO_MAX_SIZE = 500 * 1024; // 500KB per photo
+  const VIDEO_MAX_SIZE = 1 * 1024 * 1024; // 1MB per video
+
   async function addPhotos(files: FileList | null) {
     if (!files) return;
+    const newFiles = Array.from(files);
+    const tooLarge = newFiles.filter(f => f.size > PHOTO_MAX_SIZE);
+    if (tooLarge.length > 0) {
+      setError(`Photos must be less than 500KB each. "${tooLarge[0].name}" is too large.`);
+      return;
+    }
     const urls = await readFilesAsDataUrls(files);
+    setPhotoFiles(prev => [...prev, ...newFiles]);
     setPhotoDataUrls(prev => [...prev, ...urls]);
   }
 
   function removePhoto(i: number) {
+    setPhotoFiles(prev => prev.filter((_, idx) => idx !== i));
     setPhotoDataUrls(prev => prev.filter((_, idx) => idx !== i));
   }
 
   async function addVideos(files: FileList | null) {
     if (!files) return;
+    const newFiles = Array.from(files);
+    const tooLarge = newFiles.filter(f => f.size > VIDEO_MAX_SIZE);
+    if (tooLarge.length > 0) {
+      setError(`Videos must be less than 1MB each. "${tooLarge[0].name}" is too large.`);
+      return;
+    }
     const urls = await readFilesAsDataUrls(files);
+    setVideoFiles(prev => [...prev, ...newFiles]);
     setVideoDataUrls(prev => [...prev, ...urls]);
   }
 
   function removeVideo(i: number) {
+    setVideoFiles(prev => prev.filter((_, idx) => idx !== i));
     setVideoDataUrls(prev => prev.filter((_, idx) => idx !== i));
   }
 
@@ -62,6 +83,15 @@ export default function NewListing() {
     }
     if (videoDataUrls.length < 2) {
       setError("At least 2 videos are required");
+      return;
+    }
+
+    // Estimate total body size: base64 adds ~33% overhead
+    const totalPhotoSize = photoFiles.reduce((sum, f) => sum + f.size, 0);
+    const totalVideoSize = videoFiles.reduce((sum, f) => sum + f.size, 0);
+    const estimatedBodySize = (totalPhotoSize + totalVideoSize) * 1.33;
+    if (estimatedBodySize > 4 * 1024 * 1024) {
+      setError(`Total file size is too large. Please use smaller files (max ~3MB total for all files). Current estimate: ${(estimatedBodySize / 1024 / 1024).toFixed(1)}MB`);
       return;
     }
 
@@ -82,7 +112,13 @@ export default function NewListing() {
         }),
       });
 
-      const data = await res.json();
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        setError(`Server error (${res.status} — ${res.statusText}). Total file size may be too large. Try smaller files.`);
+        return;
+      }
       if (!res.ok) {
         setError(data.error || "Failed to create listing");
       } else {

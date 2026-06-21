@@ -76,6 +76,13 @@ export default function TenantVerificationPage() {
       return;
     }
 
+    // Estimate total body size (base64 adds ~33% overhead)
+    const totalSize = profilePicFile.size * 1.33;
+    if (totalSize > 4 * 1024 * 1024) {
+      setError(`File too large (estimated ${(totalSize / 1024 / 1024).toFixed(1)}MB). Use a smaller file.`);
+      return;
+    }
+
     setSubmitting(true);
     try {
       const toBase64 = (file: File): Promise<string> =>
