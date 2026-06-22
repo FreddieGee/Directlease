@@ -162,9 +162,9 @@ export default function PropertyDetail() {
 
               {/* Chat */}
               <div className="border-t pt-6">
-                <Link href="/tenant/chat" className="bg-green-600 text-white px-6 py-2 rounded-lg inline-block font-medium hover:bg-green-700 transition">
-                  💬 Chat with Landlord
-                </Link>
+                <Link href={`/tenant/chat?propertyId=${params.id}&landlordId=${property.landlordId}&propertyTitle=${encodeURIComponent(property.title)}`} className="bg-green-600 text-white px-6 py-2 rounded-lg inline-block font-medium hover:bg-green-700 transition">
+                              💬 Chat with Landlord
+                            </Link>
               </div>
             </div>
           ) : (
