@@ -1,19 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 
 export default function PropertyDetail() {
   const params = useParams();
-  const router = useRouter();
   const [property, setProperty] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [selectedSlot, setSelectedSlot] = useState("");
   const [isSaved, setIsSaved] = useState(false);
+  const [slots, setSlots] = useState<any[]>([]);
 
   const token = typeof window !== 'undefined' ? localStorage.getItem("token") : null;
   const authHeaders: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+
+  // Determine subscription status: description is only returned for subscribed users
+  const isSubscribed = property?.description ? true : false;
 
   useEffect(() => {
     fetch(`/api/properties/${params.id}`, { headers: authHeaders })
@@ -21,7 +24,6 @@ export default function PropertyDetail() {
       .then(d => { setProperty(d.property); setLoading(false); })
       .catch(() => setLoading(false));
 
-    // Check if saved
     fetch("/api/favorites", { headers: authHeaders })
       .then(r => r.json())
       .then(d => {
@@ -29,6 +31,14 @@ export default function PropertyDetail() {
         setIsSaved(saved.some((s: any) => s.id === params.id));
       })
       .catch(() => {});
+
+    // Load viewing slots if subscribed
+    if (token) {
+      fetch(`/api/properties/${params.id}/viewing-slots`, { headers: authHeaders })
+        .then(r => r.json())
+        .then(d => setSlots(d.slots || []))
+        .catch(() => {});
+    }
   }, [params.id]);
 
   async function toggleSave() {
@@ -84,6 +94,7 @@ export default function PropertyDetail() {
 
           <h1 className="text-2xl font-bold mb-2">{property.title}</h1>
           <p className="text-gray-500 mb-4">{property.address}, {property.city}, {property.state}</p>
+          
           <div className="flex items-center gap-4 mb-6">
             <p className="text-3xl font-bold text-blue-600">₦{property.priceNaira?.toLocaleString()}</p>
             <button onClick={toggleSave} className={`px-4 py-2 rounded-lg text-sm font-medium border transition ${isSaved ? 'bg-red-50 border-red-200 text-red-700' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'}`}>
@@ -91,7 +102,8 @@ export default function PropertyDetail() {
             </button>
           </div>
 
-          {property.description && (
+          {/* Subscribed content — full details */}
+          {isSubscribed && property.description && (
             <div className="mb-6">
               <h2 className="font-semibold mb-2">Description</h2>
               <p className="text-gray-700">{property.description}</p>
@@ -111,18 +123,62 @@ export default function PropertyDetail() {
             </div>
           )}
 
-          {/* Viewing Request Section */}
-          {property.description && (
+          {/* Subscribed: landlord contact info & viewing scheduling */}
+          {isSubscribed ? (
+            <div className="border-t pt-6 space-y-6">
+              {/* Landlord Contact */}
+              <div>
+                <h2 className="font-semibold mb-3">Landlord Contact</h2>
+                <div className="bg-green-50 p-4 rounded-lg space-y-2">
+                  <p className="text-sm"><strong>Name:</strong> {property.landlordName}</p>
+                  {property.landlordEmail && <p className="text-sm"><strong>Email:</strong> {property.landlordEmail}</p>}
+                  {property.landlordPhone && <p className="text-sm"><strong>Phone:</strong> {property.landlordPhone}</p>}
+                </div>
+              </div>
+
+              {/* Viewing Slots */}
+              <div className="border-t pt-6">
+                <h2 className="font-semibold mb-3">Request a Viewing</h2>
+                {slots.length > 0 ? (
+                  <div className="space-y-3">
+                    <select value={selectedSlot} onChange={e => setSelectedSlot(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm">
+                      <option value="">Select a date/time</option>
+                      {slots.filter((s: any) => s.is_available).map((slot: any) => (
+                        <option key={slot.id} value={slot.id}>
+                          {new Date(slot.date).toLocaleDateString()} at {slot.time_start?.substring(0, 5)}
+                        </option>
+                      ))}
+                    </select>
+                    <button onClick={requestViewing} disabled={!selectedSlot}
+                      className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition disabled:opacity-50">
+                      Request Viewing
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500">No available viewing slots. Check back later or contact the landlord via chat.</p>
+                )}
+              </div>
+
+              {/* Chat */}
+              <div className="border-t pt-6">
+                <Link href="/tenant/chat" className="bg-green-600 text-white px-6 py-2 rounded-lg inline-block font-medium hover:bg-green-700 transition">
+                  💬 Chat with Landlord
+                </Link>
+              </div>
+            </div>
+          ) : (
+            /* Not subscribed: upsell */
             <div className="border-t pt-6">
-              <h2 className="font-semibold mb-3">Request a Viewing</h2>
-              <div className="bg-blue-50 p-4 rounded-lg mb-4">
-                <p className="text-sm text-blue-800">
-                  💡 Subscribe to unlock full details, chat with the landlord, and schedule viewings.
+              <h2 className="font-semibold mb-3">Full Access Requires Subscription</h2>
+              <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg mb-4">
+                <p className="text-sm text-amber-800">
+                  🔒 Subscribe to unlock <strong>full property details</strong>, <strong>landlord contact info</strong>, <strong>viewing scheduling</strong>, and <strong>chat</strong> with the landlord.
                 </p>
               </div>
-              <a href="/tenant/subscriptions" className="bg-blue-600 text-white px-6 py-2 rounded-lg inline-block hover:bg-blue-700 transition">
-                Subscribe to Access
-              </a>
+              <Link href="/tenant/subscriptions" className="bg-amber-600 text-white px-6 py-2 rounded-lg inline-block font-medium hover:bg-amber-700 transition">
+                View Subscription Plans
+              </Link>
             </div>
           )}
         </div>
